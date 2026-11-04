@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <symbol id="lattice" viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="6" fill="#26323d"/>
+      <g stroke="#e8ece8" stroke-width="1.6" fill="none" stroke-linejoin="miter">
+        <path d="M16 4 L28 16 L16 28 L4 16Z"/>
+        <path d="M10 10 L22 22 M22 10 L10 22"/>
+      </g>
+      <path d="M16 11 L21 16 L16 21 L11 16Z" fill="#5fc4a9"/>
+    </symbol>
+  </defs>
+  <use href="#lattice"/>
+</svg>

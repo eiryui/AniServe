@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kura: your AniList catalogue as read-only JSON</title>
+<meta name="description" content="Kura reads the PostgreSQL catalogue an AniList Indexer builds and serves it as a fast, read-only JSON API with an in-browser explorer.">
+<meta name="theme-color" content="#e8ece8">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=JetBrains+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/kura.css">
+<script>
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("kura-theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
+</head>
+<body>
+<a class="skip" href="#explorer">Skip to the explorer</a>
+
+<header class="bar">
+  <a class="brand" href="/" aria-label="Kura home">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><use href="/assets/favicon.svg#lattice"/></svg>
+    <span>kura</span><small>v{{VERSION}}</small>
+  </a>
+  <nav aria-label="Primary">
+    <a href="#explorer">Explorer</a>
+    <a href="#ledger">Ledger</a>
+    <a href="#routes">Routes</a>
+    <a href="#export">Export</a>
+  </nav>
+  <div class="bar-end">
+    <a class="status" id="status" href="/health" target="_blank" rel="noopener"><i></i><span>Checking</span></a>
+    <button class="theme" id="theme" type="button" aria-label="Switch between light and dark"></button>
+  </div>
+</header>
+
+<main>
+  <section class="hero" aria-labelledby="h1">
+    <div class="hero-copy">
+      <h1 id="h1">Every title, shelved as JSON.</h1>
+      <p>Kura reads the PostgreSQL catalogue your AniList Indexer builds and serves it as a read-only API. It never calls AniList and never writes a row. Each tile below is a real record: pick one to open it.</p>
+    </div>
+    <div class="wall" id="wall" role="group" aria-label="Titles in the catalogue"></div>
+    <dl class="tally" id="tally" aria-live="polite">
+      <div><dt>Titles shelved</dt><dd data-k="entries">–</dd></div>
+      <div><dt>Airing soon</dt><dd data-k="airing">–</dd></div>
+      <div><dt>Years covered</dt><dd data-k="years">–</dd></div>
+      <div><dt>Indexer last wrote</dt><dd data-k="last">–</dd></div>
+    </dl>
+  </section>
+
+  <section class="explorer" id="explorer" aria-labelledby="h-ex">
+    <h2 id="h-ex">Try a request</h2>
+    <div class="desk">
+      <form class="slip" id="slip" autocomplete="off">
+        <div class="routes" id="routeTabs" role="tablist" aria-label="Route"></div>
+        <div class="fields" id="fields"></div>
+        <label class="adult"><input type="checkbox" id="isAdult"><span>Include adult titles</span></label>
+        <div class="callno">
+          <code id="callno"></code>
+          <div class="callno-actions">
+            <button type="button" id="copyUrl">Copy URL</button>
+            <button type="button" id="copyCurl">Copy curl</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="reader" aria-live="polite">
+        <div class="reader-head">
+          <div class="views" role="tablist" aria-label="View" id="views"></div>
+          <div class="meta" id="meta"></div>
+        </div>
+        <div class="reader-body" id="out"><p class="empty">Choose a route to load the first page.</p></div>
+        <div class="pager" id="pager" hidden>
+          <button type="button" id="prev">Previous page</button>
+          <span id="pageinfo"></span>
+          <button type="button" id="next">Next page</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ledger" id="ledger" aria-labelledby="h-led">
+    <h2 id="h-led">What is on the shelves</h2>
+    <p class="sub">Counted live from the database, refreshed every 30 seconds at most.</p>
+    <div class="charts" id="charts"><p class="empty">Loading counts…</p></div>
+    <div class="jobs" id="jobs"></div>
+  </section>
+
+  <section class="routes-sec" id="routes" aria-labelledby="h-rt">
+    <h2 id="h-rt">Routes</h2>
+    <p class="sub">Every route is a <code>GET</code> and shares <code>page</code>, <code>per_page</code> and <code>isAdult</code>. Use <em>Try</em> to run one above.</p>
+    <div id="routeList"></div>
+  </section>
+
+  <section class="export" id="export" aria-labelledby="h-xp">
+    <h2 id="h-xp">Take the whole catalogue with you</h2>
+    <p class="sub">Three ways to turn the database into JSON files. All of them read only.</p>
+    <div class="recipes" id="recipes"></div>
+  </section>
+</main>
+
+<footer>
+  <p>Kura is a read-only companion to <strong>AniList Indexer</strong> by JsmaAtom, released under the MIT licence (<a href="/license">licence text</a>). It is not affiliated with AniList. Interactive docs: <a href="/docs">Swagger</a>, <a href="/redoc">ReDoc</a>, <a href="/openapi.json">OpenAPI</a>.</p>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="/assets/kura.js" defer></script>
+</body>
+</html>
