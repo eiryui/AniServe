@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kura: your AniList catalogue as read-only JSON</title>
-<meta name="description" content="Kura reads the PostgreSQL catalogue an AniList Indexer builds and serves it as a fast, read-only JSON API with an in-browser explorer.">
+<title>AniServe: the AniList database as read-only JSON</title>
+<meta name="description" content="AniServe connects to a database loaded from the AniList DB dump (PostgreSQL, SQLite, DuckDB or Parquet) and serves it as a fast, read-only JSON API with an in-browser explorer.">
 <meta name="theme-color" content="#e8ece8">
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=JetBrains+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/kura.css">
+<link rel="stylesheet" href="/assets/aniserve.css">
 <script>
   (function () {
     var t = null;
-    try { t = localStorage.getItem("kura-theme"); } catch (e) {}
+    try { t = localStorage.getItem("aniserve-theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.setAttribute("data-theme", t);
   })();
@@ -24,9 +24,9 @@
 <a class="skip" href="#explorer">Skip to the explorer</a>
 
 <header class="bar">
-  <a class="brand" href="/" aria-label="Kura home">
+  <a class="brand" href="/" aria-label="AniServe home">
     <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><use href="/assets/favicon.svg#lattice"/></svg>
-    <span>kura</span><small>v{{VERSION}}</small>
+    <span>AniServe</span><small>v{{VERSION}}</small>
   </a>
   <nav aria-label="Primary">
     <a href="#explorer">Explorer</a>
@@ -44,14 +44,14 @@
   <section class="hero" aria-labelledby="h1">
     <div class="hero-copy">
       <h1 id="h1">Every title, shelved as JSON.</h1>
-      <p>Kura reads the PostgreSQL catalogue your AniList Indexer builds and serves it as a read-only API. It never calls AniList and never writes a row. Each tile below is a real record: pick one to open it.</p>
+      <p>AniServe connects to a database loaded from the AniList DB dump and serves it as a read-only API, from PostgreSQL, SQLite, DuckDB or Parquet. It never calls AniList and never writes a row. Each tile below is a real record: pick one to open it.</p>
     </div>
     <div class="wall" id="wall" role="group" aria-label="Titles in the catalogue"></div>
     <dl class="tally" id="tally" aria-live="polite">
       <div><dt>Titles shelved</dt><dd data-k="entries">–</dd></div>
       <div><dt>Airing soon</dt><dd data-k="airing">–</dd></div>
       <div><dt>Years covered</dt><dd data-k="years">–</dd></div>
-      <div><dt>Indexer last wrote</dt><dd data-k="last">–</dd></div>
+      <div><dt>Data last refreshed</dt><dd data-k="last">–</dd></div>
     </dl>
   </section>
 
@@ -101,16 +101,16 @@
 
   <section class="export" id="export" aria-labelledby="h-xp">
     <h2 id="h-xp">Take the whole catalogue with you</h2>
-    <p class="sub">Three ways to turn the database into JSON files. All of them read only.</p>
+    <p class="sub">Three ways to turn the database into JSON files. All of them are read-only.</p>
     <div class="recipes" id="recipes"></div>
   </section>
 </main>
 
 <footer>
-  <p>Kura is a read-only companion to <strong>AniList Indexer</strong> by JsmaAtom, released under the MIT licence (<a href="/license">licence text</a>). It is not affiliated with AniList. Interactive docs: <a href="/docs">Swagger</a>, <a href="/redoc">ReDoc</a>, <a href="/openapi.json">OpenAPI</a>.</p>
+  <p>AniServe is an independent open-source project released under the MIT licence (<a href="/license">licence text</a>). It is not affiliated with AniList. Interactive docs: <a href="/docs">Swagger</a>, <a href="/redoc">ReDoc</a>, <a href="/openapi.json">OpenAPI</a>.</p>
 </footer>
 
 <div class="toast" id="toast" role="status"></div>
-<script src="/assets/kura.js" defer></script>
+<script src="/assets/aniserve.js" defer></script>
 </body>
 </html>

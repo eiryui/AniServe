@@ -1,4 +1,5 @@
 fastapi>=0.100
 uvicorn[standard]
-psycopg2-binary
+psycopg2-binary    # PostgreSQL only
+duckdb             # DuckDB and Parquet only
 python-dotenv

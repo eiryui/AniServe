@@ -1,120 +1,99 @@
-# Kura
+# AniServe
 
-**Your AniList catalogue, shelved as read-only JSON.**
+Serve the AniList database dump as a read-only JSON API, with a small browser UI.
 
-Kura is the *database to JSON* half of AniList Indexer. The indexer crawls AniList and fills PostgreSQL. Kura only reads that database and serves it as a fast JSON API, with an in-browser explorer and a one-command exporter. It never contacts AniList and never writes a row.
+Point AniServe at a database loaded from the dump
+(<https://github.com/eiryui/AniList-DB-Dump/releases/latest>) and it serves the anime catalogue as JSON:
+search, filters, trending, schedule, detail pages, characters, relations and recommendations.
+It never writes to the database and never calls AniList.
 
-```text
-AniList ──▶ AniList Indexer ──▶ PostgreSQL ──▶ Kura ──▶ your frontend / JSON files
-             (writer, 1 only)     (JSONB)      (reader, as many as you like)
-```
-
-Why split them: the indexer needs one writer, a schedule and AniList's rate limit. The API needs none of that, so it can scale out, sit behind a CDN, run with a read-only database role, or be public while the indexer stays private.
-
-## Quickstart
-
-You need Python 3.11+ and a database an AniList Indexer (1.8 or newer) has already filled.
-
-```sh
-cp .env.example .env          # set DATABASE_URL
+```bash
 pip install -r requirements.txt
-uvicorn app:app --port 8002
+cp .env.example .env            # set DATABASE_URL
+uvicorn app:app --port 8002     # UI at http://localhost:8002/  API docs at /swagger
 ```
 
-Open <http://localhost:8002>. The wall at the top is the live catalogue; the explorer below sends real requests and shows the response as titles, a record page, or highlighted JSON. Request state lives in the URL hash, so any view can be shared as a link.
+Want to try it before downloading the dump? `python tools/make_demo.py` writes `data/demo.sqlite` with invented titles;
+then `DATABASE_URL=sqlite:///data/demo.sqlite`.
 
-No indexer yet? Try it on a throwaway database with invented titles:
+## Databases
 
-```sh
-python tools/seed_demo.py --count 180   # the only script that writes
-```
-
-## Database to JSON
-
-| How | Command |
+| `DATABASE_URL` | Release file |
 |---|---|
-| HTTP, streamed | `curl -o catalog.ndjson http://localhost:8002/export` (add `?format=json` for one array) |
-| No server | `python export.py catalog.ndjson` |
-| One array | `python export.py catalog.json --format json` |
-| One file per title | `python export.py shelf/ --format files` writes `shelf/9000/9000003.json` (folders of 1000 ids) |
+| `postgresql://user:pass@host:5432/db` | `.dump`, `.tar`, `.sql.gz` (restore), or CSV |
+| `sqlite:///data/anilist.sqlite` | `.sqlite` |
+| `duckdb:///data/anilist.duckdb` | `.duckdb` |
+| `parquet:///data/parquet` | `-parquet.zip`, unzipped |
+| any of the SQLite or DuckDB forms | CSV, TSV or JSON Lines, converted with `python load_dump.py` |
 
-Records come out in the same shape as `/list`: the full stored record, fixed key order, bookkeeping keys removed, adult titles left out unless you pass `isAdult=true` (HTTP) or `--adult` (CLI). Add `--pretty` for indented files.
+**[docs/DEPLOY.md](docs/DEPLOY.md)** has the step-by-step guide: verifying downloads, restoring into each database,
+read-only roles, hosted PostgreSQL, Docker. MySQL, MariaDB, SQL Server and MongoDB are not supported.
 
-## Routes
+For a minimal SQLite-only install: `pip install fastapi uvicorn`. The PostgreSQL and DuckDB drivers are imported only
+when needed; a missing one shows up in `/health` as a clear message.
 
-All `GET`. Collections take `page`, `per_page` (1 to 50) and `isAdult`, and return `{ page, perPage, total, hasNextPage, results }`.
+## Endpoints
 
-| Route | Notes |
-|---|---|
-| `/search?query=` | Every word must appear in a title or synonym, any order. |
-| `/filter`, `/multi-search` | `q`, `genre`, `tag` (repeatable), `year`, `season`, `format`, `status`, `sort`. |
-| `/suggestions?query=` | Up to 8 results for autocomplete. |
-| `/popular` `/trending` `/recent` `/upcoming` `/spotlight` `/schedule` | Collections. `/schedule` adds `next_episode`, `airingAt`, `timeUntilAiring` (recomputed on every request). |
-| `/info/{id}` | Full stored record. |
-| `/anime/{id}/characters`, `/relations`, `/recommendations` | Detail pages. |
-| `/genres`, `/tags`, `/list` | Fixed lists, and every record by id (up to 500 per page). |
-| **`/stats`** | New. Counts by status, format, decade and genre, plus when the indexer last ran each job. |
-| **`/export`** | New. Streams the whole catalogue. |
-| `/health`, `/docs`, `/redoc`, `/swagger`, `/openapi.json` | Status and API docs. |
+`/search /multi-search /filter /suggestions /trending /popular /recent /upcoming /spotlight /genres /tags /schedule /list
+/info/{id} /anime/{id}/characters /anime/{id}/relations /anime/{id}/recommendations /health /stats /export`
 
-Sort names are `POPULARITY`, `SCORE`, `TRENDING`, `START_DATE`, `FAVOURITES`, `UPDATED_AT` and `ID`, each with `_DESC` (most first) or `_ASC`.
+Adult titles are hidden unless `isAdult=true`. Lists accept `page` and `per_page` (max 50), and `/filter` accepts
+`sort=POPULARITY_DESC|SCORE_DESC|TRENDING_DESC|START_DATE_DESC|FAVOURITES_DESC|UPDATED_AT_DESC|ID_ASC` (and `_ASC` variants).
+Every response carries `X-AniServe-Ms`. `/swagger` lists all parameters.
 
-### What differs from the indexer's own API
+`/stats` summarises the data (counts by status, format, decade, top genres, last refresh). `/export` streams the catalogue as
+NDJSON (`?format=json` for one array, `?isAdult=true` to include adult titles); `python export.py OUT` does the same from the
+command line. Set `ANISERVE_ENABLE_EXPORT=false` on a public deployment to switch the HTTP route off.
 
-The routes and response shapes are the same, so a frontend can switch over by changing its base URL. Three behaviours differ because Kura cannot reach AniList:
+## JSON shape and what was checked
 
-- `/info/{id}` includes `staff`, `externalLinks`, `streamingEpisodes` and `stats` only if the indexer's API already fetched and stored them for that title. Kura never fetches them.
-- `/anime/{id}/characters` and `/recommendations` serve the first 25 plus any later blocks the indexer's API has stored. A page past the stored data comes back empty, and `total` still reports AniList's real count. Pages are never stitched across a gap.
-- Kura adds `/stats`, `/export` and an `X-Kura-Ms` timing header, and turns CORS credentials off.
+The JSON follows the Miruro/Eiryui-style API layout: same fields, same key order, same envelopes.
+I verified this by running the reference implementation and AniServe side by side on the same data and comparing responses byte for byte:
+200 requests (every list route, every sort in both directions, filters, search edge cases, adult handling, detail
+pages, paged characters and recommendations, error responses), identical on PostgreSQL, SQLite, DuckDB, Parquet, and on
+CSV, TSV and JSON converted to SQLite and DuckDB, in strict and non-strict shape mode (`timeUntilAiring` was compared after
+removing it, since it depends on the clock).
 
-If you need those fetch-on-demand details, keep using the indexer's API for them, or let a title be opened there once.
+Limits of that check, stated plainly:
+- It used test data made with the dump's own export script, not the real release files, which I could not download.
+- It covered only routes that do not need live AniList. `/health`, `/stats` and `/export` are new and have no original to compare with.
 
-## Safety
+Intentional differences: AniServe never calls AniList, so a detail page contains only what the dump stores and
+character/recommendation pages beyond the stored ones are empty rather than fetched; plus the new routes and the timing header.
 
-- Every database session is opened with `default_transaction_read_only=on` and a 30 s statement timeout. Even a bug cannot modify the catalogue, and a read-only Postgres role works.
-- Kura checks that `anilist_catalog` and its generated columns exist, reports the problem in `/health` if not, and reconnects by itself when the database or the indexer's schema appears later.
-- Dead pooled connections are detected and replaced. If the database is unreachable you get `503`, not a stack trace.
-- One full export runs at a time so it cannot starve the API. Set `KURA_ENABLE_EXPORT=false` to disable `/export` on a public deployment.
+## Performance
+
+Measured on 18,000 generated titles (the real dump is 153 MB, similar in row count):
+
+| Engine | Popular list | Text search | Filter | Notes |
+|---|---|---|---|---|
+| SQLite | ~20 ms | ~290 ms | ~340 ms | no startup cost |
+| DuckDB, memory (default) | 14-19 ms | not recorded | not recorded | ~1.2 s startup, high RAM |
+| DuckDB, disk | ~150 ms | not recorded | not recorded | low RAM |
+| Parquet, memory / disk | 13-21 ms / 255-318 ms | not recorded | not recorded | |
+
+PostgreSQL was verified for correctness, not benchmarked. `/export` of 17,102 rows took 30 to 45 seconds.
 
 ## Configuration
 
-See [`.env.example`](.env.example). Only `DATABASE_URL` is required.
-
-## Docker
-
-```sh
-docker build -t kura .
-docker run -p 8002:8002 -e DATABASE_URL=postgresql://user:pass@host/db kura
-```
-
-`localhost` inside the container is the container itself; use `host.docker.internal` or a network name for a local database.
+See `.env.example`; every variable is documented there (`DATABASE_URL`, `ANISERVE_SCHEMA`, `ANISERVE_DUCKDB_MODE`, `PORT`,
+`ALLOWED_ORIGINS`, rate limits, `API_STRICT_MIRURO_SHAPE`, `ANISERVE_ENABLE_EXPORT`, `ANISERVE_STATEMENT_TIMEOUT_MS`).
 
 ## Tests
 
-```sh
+```bash
 pip install -r requirements-dev.txt
-DATABASE_URL=postgresql://... python tests/test_api.py
+python tests/test_api.py                                          # SQLite, DuckDB, Parquet (338 checks)
+TEST_POSTGRES_URL=postgresql://... python tests/test_api.py       # plus PostgreSQL
 ```
 
-39 checks against a seeded database: response shapes, sorting and paging, search escaping, adult hiding, stored-block paging, fresh `timeUntilAiring`, export, read-only enforcement, connection recovery and the rate limiter.
+## Safety
 
-## Name ideas
+Each engine is opened read-only (PostgreSQL read-only transactions with a statement timeout; SQLite `mode=ro`;
+DuckDB read-only or an in-memory copy), and the tests confirm the source files are byte-for-byte unchanged after a run.
+There is a per-client rate limit. Behind a reverse proxy, set `API_RATE_LIMIT_TRUST_PROXY=true`.
 
-Kura is a working title. It is short, easy to type, and fits the idea: a *kura* (蔵) is the fireproof storehouse where a household keeps what it values, and the UI borrows its famous white-plaster and diamond-tile wall. Alternatives:
+## Licence
 
-| Name | Meaning | Feel |
-|---|---|---|
-| **Kura** 蔵 | Storehouse | Short, calm, the current pick. |
-| **Tana** 棚 | Shelf | Friendly; "your catalogue on a shelf". |
-| **Zaiko** 在庫 | Stock in a warehouse | Playful, inventory-minded. |
-| **Shikkui** 漆喰 | The white plaster of a kura wall | Distinctive but hard to type. |
-| **Kawara** 瓦 | Roof tile | Pairs well with the tile motif. |
-| **Mado** 窓 | Window | "A read-only window onto the database". |
-| **Shelfline** | English: shelf plus pipeline | Plain, searchable. |
-| **Readroom** | English: a reading room | Says "read-only" directly. |
-
-To rename: change `APP_NAME` in `app.py`, the wordmark and `<title>` in `ui/index.html`, and the heading in this file.
-
-## Credits and licence
-
-Derived from AniList Indexer by JsmaAtom (MIT), whose record shaping and route contract Kura keeps. UI by this project. MIT licensed, see [LICENSE](LICENSE). Not affiliated with AniList; anime data belongs to its respective owners and to AniList's terms.
+MIT, see `LICENSE`. Parts of this code derive from an MIT-licensed project, so its original copyright notice must stay.
+AniServe is independent and not affiliated with AniList. Check the dump's and AniList's own terms before republishing the data.
