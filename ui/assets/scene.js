@@ -11,7 +11,7 @@
 
   const face = (m, i) => '<div class="f" style="--h:' + m.h + '">' + (m.img ? '<img loading="lazy" alt="" src="' + esc(m.img) + '">' : "<b>" + esc(m.t[0]) + "</b>") +
     "<span>" + esc(m.t) + "<small>" + esc(m.sub) + "</small></span></div>";
-  const ring = $("#ring"), rail = $("#rail"), N = 14, T = 50, GAP = 150, STEP = 360 / N;
+  const ring = $("#ring"), rail = $("#rail"), N = 16, T = 50, GAP = 150, STEP = 360 / N;
   let pcs = [];
   function build() {
     const at = (i) => items[i % items.length];
@@ -21,8 +21,14 @@
       return '<div class="tc" style="--x:' + x + ";--y:" + y + ";--z:" + i * GAP + '">' + face(popular[i % popular.length], i) + "</div>";
     }).join("");
   }
+  ring.style.setProperty("--step", STEP + "deg");
   build();
   pcs = $$(".pc", ring);
+
+  /* ring radius in px (the CSS owns the size; a hidden probe reads it back) so the zoom can be capped to stay in front of the camera */
+  let R = 400;
+  const measure = () => { const q = document.createElement("i"); q.style.cssText = "position:absolute;visibility:hidden;width:var(--R);height:0"; ring.appendChild(q); R = q.offsetWidth || R; q.remove(); };
+  measure();
 
   /* live titles */
   const toItems = (d) => (d.results || []).filter((m) => m.coverImage && m.coverImage.large).map((m, i) => ({
@@ -40,7 +46,7 @@
   /* scroll progress per scene (0 to 1 while its sticky stage is pinned) */
   const scenes = $$(".scene"), reveals = $$("[data-r]"), logo = $("#logo3d"), copy = $("#hero-copy"), caps = $$(".cap");
   let mx = 0, my = 0, sx = 0, sy = 0, vh = innerHeight;
-  addEventListener("resize", () => { vh = innerHeight; });
+  addEventListener("resize", () => { vh = innerHeight; measure(); });
   addEventListener("pointermove", (e) => { mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; }, { passive: true });
 
   function frame(t) {
@@ -52,14 +58,15 @@
       s.style.setProperty("--p", p.toFixed(4));
       if (s.id === "top") {
         const spin = p * 330 + (still ? 20 : t / 1000 * 7);
-        ring.style.transform = "rotateX(" + (innerWidth > 860 ? -28 : -32) + "deg) rotateY(" + spin + "deg) scale(" + (1 + p * p * 2.6).toFixed(3) + ")";
+        const tilt = innerWidth > 860 ? -28 : -32, zoom = 1 + p * p * 1.55; /* 2.55x at most: the front cards stay in front of the camera, so the ring never warps */
+        ring.style.transform = "rotateX(" + tilt + "deg) rotateY(" + spin + "deg) scale(" + zoom.toFixed(3) + ")";
         /* a card turning edge-on to the camera draws as a jagged sliver, so fade it out while it does */
         for (let k = 0; k < pcs.length; k++) {
-          const c = Math.abs(Math.cos((k * STEP + spin) * Math.PI / 180)), u = clamp(c / 0.3, 0, 1);
+          const c = Math.abs(Math.cos((k * STEP + spin) * Math.PI / 180)), u = clamp(c / 0.12, 0, 1);
           pcs[k].style.setProperty("--edge", (u * u * (3 - 2 * u)).toFixed(3));
         }
-        ring.style.setProperty("--fade", clamp(1 - (p - 0.3) * 2.6, 0, 1).toFixed(3)); /* fade the cards, not the ring: opacity on a 3D parent flattens it */
-        logo.style.transform = "rotateY(" + (sx * 26 + Math.sin(t / 1800) * 5) + "deg) rotateX(" + (-sy * 20) + "deg) translate3d(0," + (-6 - p * 10) + "%," + (-p * 300) + "px) scale(" + (1 + p * 0.4) + ")";
+        ring.style.setProperty("--fade", clamp(1 - (p - 0.4) * 2.2, 0, 1).toFixed(3)); /* fade the cards, not the ring: opacity on a 3D parent flattens it */
+        logo.style.transform = "rotateY(" + (sx * 26 + Math.sin(t / 1800) * 5) + "deg) rotateX(" + (-sy * 20) + "deg) translate3d(0," + (-6 - p * 10) + "%," + (-p * R * 0.6).toFixed(1) + "px) scale(" + (1 + p * 0.4) + ")";
         logo.style.opacity = clamp(1.5 - p * 1.5, 0, 1);
         copy.style.opacity = clamp(1 - p * 8, 0, 1);
         copy.style.transform = "translateY(calc(" + (innerWidth > 860 ? "-50%" : "0px") + " - " + p * 140 + "px))";
