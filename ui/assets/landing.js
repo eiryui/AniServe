@@ -7,20 +7,6 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } },
   };
 
-  /* ── theme ── */
-  function syncThemeIcon() {
-    const dark = document.documentElement.getAttribute("data-theme") === "dark";
-    document.querySelectorAll("[data-theme-toggle] use").forEach((u) => u.setAttribute("href", "/assets/icons.svg#" + (dark ? "i-sun" : "i-moon")));
-  }
-  syncThemeIcon();
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest("[data-theme-toggle]")) return;
-    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    safe.set("aniserve-theme", next);
-    syncThemeIcon();
-  });
-
   /* ── copy buttons ── */
   function copyText(text, btn) {
     const done = () => {
@@ -186,34 +172,4 @@ API_STRICT_MIRURO_SHAPE=true       # false keeps the richer stored fields
     .then((d) => { nTitles.textContent = Number(d.total || 0).toLocaleString(); })
     .catch(() => { nTitles.textContent = "–"; });
 
-  /* ── hero: live poster shelf from /trending ── */
-  const shelf = $("#shelf"), meta = $("#console-meta"), foot = $("#console-foot");
-  const lane = (inner, rev) => '<div class="lane' + (rev ? " rev" : "") + '"><div class="lane-track">' + inner + "</div></div>";
-  const ghosts = () => '<figure class="card ghost">' + ICON("i-film") + "</figure>";
-  shelf.innerHTML = lane(Array(14).fill(ghosts()).join("")) + lane(Array(14).fill(ghosts()).join(""), true);
-  const t0 = performance.now();
-  fetch("/trending?per_page=20").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((d) => {
-    const items = (d.results || []).filter((m) => m.coverImage && m.coverImage.large);
-    if (!items.length) {
-      meta.textContent = "200 OK · 0 results"; meta.className = "console-meta ok";
-      foot.textContent = "The database has no titles yet. Fill it with AniList Indexer (or load your own data), then refresh.";
-      return;
-    }
-    const card = (m, i) => {
-      const t = (m.title && (m.title.english || m.title.romaji)) || "Untitled";
-      const sub = [m.format, m.seasonYear, m.meanScore ? "★ " + m.meanScore : ""].filter(Boolean).join(" · ");
-      return '<figure class="card"><img loading="lazy" src="' + esc(m.coverImage.large) + '" alt="' + esc(t) + ' poster" width="112" height="168"><span class="rk">#' + (i + 1) +
-        "</span><figcaption><span>" + esc(t) + "</span><small>" + esc(sub) + "</small></figcaption></figure>";
-    };
-    // Two distinct rows: ranks 1-10 on the first lane, 11-20 on the second.
-    const half = Math.ceil(items.length / 2);
-    const a = items.slice(0, half).map((m, i) => card(m, i)), b = items.slice(half).map((m, i) => card(m, half + i));
-    const row = (list) => list.join("") + list.join("");
-    shelf.innerHTML = lane(row(a)) + lane(row(b.length ? b : a), true);
-    meta.textContent = "200 OK · " + items.length + " results · " + Math.round(performance.now() - t0) + " ms";
-    meta.className = "console-meta ok";
-  }).catch((err) => {
-    meta.textContent = "request failed"; meta.className = "console-meta bad";
-    foot.textContent = "Could not reach /trending (" + err.message + "). The database may be unavailable or empty.";
-  });
 })();
