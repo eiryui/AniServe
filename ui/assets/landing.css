@@ -269,10 +269,11 @@ body{background:radial-gradient(120% 60% at 70% 0%,#1a0f38 0,transparent 60%),va
 .tc .f{position:absolute;inset:0}
 .caps{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:2;text-align:center}
 .cap{grid-area:1/1;max-width:600px;padding:0 20px;opacity:var(--o,0);transform:translateZ(0) scale(calc(.9 + var(--o,0)*.1));text-shadow:0 4px 40px #08050f,0 0 20px #08050f}
+.cap{position:relative}.cap::before{content:"";position:absolute;inset:-36px -70px;z-index:-1;background:radial-gradient(ellipse at center,rgba(8,5,15,.82) 0,rgba(8,5,15,.6) 45%,transparent 72%)}
 .cap h2{font:800 clamp(2rem,5vw,3.8rem)/1.05 var(--font-display);letter-spacing:-.03em}
 .cap p{color:var(--muted);margin:14px auto 0;max-width:46ch;font-size:1.05rem}
 .cap code{display:inline-block;margin-top:18px;padding:8px 14px;font-size:.9rem;background:rgba(20,13,38,.85);border:1px solid var(--line-2);border-radius:10px}
-.tunnel .stage::after{content:"";position:absolute;inset:0;background:radial-gradient(closest-side at 50% 50%,rgba(8,5,15,.75),transparent 70%);pointer-events:none;z-index:1}
+.tunnel .stage::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 46% 40% at 50% 50%,rgba(8,5,15,.92),rgba(8,5,15,.55) 55%,transparent 100%);pointer-events:none;z-index:1}
 .how{height:300vh;padding:0}.how .stage{perspective:1600px;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:30px;max-width:1180px;margin:0 auto;padding:0 20px;overflow:visible}
 .how .sec-head{grid-column:1/-1;margin:0;align-self:end;padding-top:var(--nav-h)}
 .iso{position:relative;height:min(52vh,460px);transform-style:preserve-3d;transform:rotateX(58deg) rotateZ(calc(-12deg - var(--p,0)*28deg));--gap:calc(var(--p,0)*130px)}

@@ -1,5 +1,5 @@
 /* AniServe landing: scroll-driven 3D scenes. No libraries, CSS 3D transforms only.
-   Cards come from /trending when the database has titles; otherwise stand-in posters are drawn. */
+   The hero ring uses /trending; the tunnel uses the 50 most popular titles from /popular. Without database titles, stand-in posters are drawn. */
 (function () {
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => [...(r || document).querySelectorAll(s)];
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -7,31 +7,33 @@
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const FALLBACK = ["Frieren", "Dandadan", "Solo Leveling", "Jujutsu Kaisen", "Spy x Family", "Vinland Saga", "Mushishi", "Cowboy Bebop", "Haikyuu!!", "Violet Evergarden", "Steins;Gate", "Mob Psycho 100", "Fruits Basket", "Monster", "Clannad", "Kaguya-sama", "Blue Lock", "Chainsaw Man", "Bocchi the Rock!", "Oshi no Ko"];
   let items = FALLBACK.map((t, i) => ({ t, sub: "Anime", h: 255 + ((i * 29) % 90), img: "" }));
+  let popular = items; /* tunnel cards: replaced by the 50 most popular titles when the database answers */
 
   const face = (m, i) => '<div class="f" style="--h:' + m.h + '">' + (m.img ? '<img loading="lazy" alt="" src="' + esc(m.img) + '">' : "<b>" + esc(m.t[0]) + "</b>") +
     "<span>" + esc(m.t) + "<small>" + esc(m.sub) + "</small></span></div>";
-  const ring = $("#ring"), rail = $("#rail"), N = 14, T = 16, GAP = 470;
+  const ring = $("#ring"), rail = $("#rail"), N = 14, T = 50, GAP = 150;
   function build() {
     const at = (i) => items[i % items.length];
     ring.innerHTML = Array.from({ length: N }, (_, i) => '<div class="pc" style="--i:' + i + '">' + face(at(i), i).replace('class="f"', 'class="f a"') + face(at(i), i).replace('class="f"', 'class="f b"').replace("<b>", "<b>") + "</div>").join("");
     rail.innerHTML = Array.from({ length: T }, (_, i) => {
       const side = i % 2 ? 1 : -1, x = side * (24 + ((i * 37) % 17)), y = ((i * 53) % 7 - 3) * 9;
-      return '<div class="tc" style="--x:' + x + ";--y:" + y + ";--z:" + i * GAP + '">' + face(at(i + 5), i) + "</div>";
+      return '<div class="tc" style="--x:' + x + ";--y:" + y + ";--z:" + i * GAP + '">' + face(popular[i % popular.length], i) + "</div>";
     }).join("");
   }
   build();
 
   /* live titles */
-  fetch("/trending?per_page=20").then((r) => { if (!r.ok) throw 0; return r.json(); }).then((d) => {
-    const live = (d.results || []).filter((m) => m.coverImage && m.coverImage.large);
-    if (!live.length) return;
-    items = live.map((m, i) => ({
-      t: (m.title && (m.title.english || m.title.romaji)) || "Untitled",
-      sub: [m.format, m.seasonYear, m.meanScore ? "★ " + m.meanScore : ""].filter(Boolean).join(" · "),
-      h: 255 + ((i * 29) % 90), img: m.coverImage.large,
-    }));
-    build();
+  const toItems = (d) => (d.results || []).filter((m) => m.coverImage && m.coverImage.large).map((m, i) => ({
+    t: (m.title && (m.title.english || m.title.romaji)) || "Untitled",
+    sub: [m.format, m.seasonYear, m.meanScore ? "★ " + m.meanScore : ""].filter(Boolean).join(" · "),
+    h: 255 + ((i * 29) % 90), img: m.coverImage.large,
+  }));
+  const load = (url, apply) => fetch(url).then((r) => { if (!r.ok) throw 0; return r.json(); }).then((d) => {
+    const live = toItems(d);
+    if (live.length) { apply(live); build(); }
   }).catch(() => { /* keep the stand-in posters */ });
+  load("/trending?per_page=20", (live) => { items = live; });
+  load("/popular?per_page=50", (live) => { popular = live; });
 
   /* scroll progress per scene (0 to 1 while its sticky stage is pinned) */
   const scenes = $$(".scene"), reveals = $$("[data-r]"), logo = $("#logo3d"), copy = $("#hero-copy"), caps = $$(".cap");
