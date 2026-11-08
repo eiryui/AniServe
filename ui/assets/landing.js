@@ -145,7 +145,7 @@ docker run -d --name aniserve \\
 
 # DATABASE_URL must be reachable from inside the container.
 # The container honours $PORT (default 8001).` },
-    env: { text: `# Required: a PostgreSQL filled by AniList Indexer (tables in schema.sql)
+    env: { text: `# Required: a PostgreSQL with the AniList tables (see schema.sql)
 DATABASE_URL=postgresql://user:password@host:5432/anilist_index
 
 # Server

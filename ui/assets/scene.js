@@ -48,12 +48,13 @@
       s.style.setProperty("--p", p.toFixed(4));
       if (s.id === "top") {
         const spin = p * 330 + (still ? 20 : t / 1000 * 7);
-        ring.style.transform = "rotateX(" + (-24 - p * 30) + "deg) rotateY(" + spin + "deg) translateZ(" + (p * p * 1500) + "px)";
-        ring.style.opacity = clamp(1.4 - p * 1.4, 0, 1);
-        logo.style.transform = "rotateY(" + (sx * 26 + Math.sin(t / 1800) * 5) + "deg) rotateX(" + (-sy * 20) + "deg) translate3d(0," + (-6 - p * 10) + "%," + (p * 340) + "px) scale(" + (1 + p * 0.3) + ")";
-        logo.style.opacity = clamp(1.6 - p * 1.6, 0, 1);
-        copy.style.opacity = clamp(1 - p * 3.2, 0, 1);
-        copy.style.pointerEvents = p > 0.3 ? "none" : "";
+        ring.style.transform = "rotateX(-24deg) rotateY(" + spin + "deg) scale(" + (1 + p * p * 2.6).toFixed(3) + ")";
+        ring.style.setProperty("--fade", clamp(1 - (p - 0.3) * 2.6, 0, 1).toFixed(3)); /* fade the cards, not the ring: opacity on a 3D parent flattens it */
+        logo.style.transform = "rotateY(" + (sx * 26 + Math.sin(t / 1800) * 5) + "deg) rotateX(" + (-sy * 20) + "deg) translate3d(0," + (-6 - p * 10) + "%," + (-p * 300) + "px) scale(" + (1 + p * 0.4) + ")";
+        logo.style.opacity = clamp(1.5 - p * 1.5, 0, 1);
+        copy.style.opacity = clamp(1 - p * 8, 0, 1);
+        copy.style.transform = "translateY(calc(" + (innerWidth > 860 ? "-50%" : "0px") + " - " + p * 140 + "px))";
+        copy.style.pointerEvents = p > 0.1 ? "none" : "";
         hint.style.opacity = p > 0.03 ? 0 : 1;
       } else if (s.id === "tunnel") {
         rail.style.transform = "translateZ(" + (p * ((T - 1) * GAP + 700)) + "px) rotateY(" + sx * 6 + "deg) rotateX(" + -sy * 4 + "deg)";

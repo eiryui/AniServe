@@ -105,7 +105,7 @@
           {
             id: "info", path: "/info/{id}",
             summary: "The full stored record for one anime.",
-            desc: "Includes titles, artwork, scores, studios, trailer, dates, relations, recommendations, the first 25 characters (Japanese voice actors), staff, external links, streaming episodes and score stats. Staff, links, streaming episodes and stats are whatever the indexer has stored so far; the request itself never calls AniList. A title the indexer has not reached yet returns them empty, with the header <code>X-Index-Status: partial</code>. Returns 404 if the id is not in the database yet, or if it is an adult title and <code>isAdult</code> is not true.",
+            desc: "Includes titles, artwork, scores, studios, trailer, dates, relations, recommendations, the first 25 characters (Japanese voice actors), staff, external links, streaming episodes and score stats. Staff, links, streaming episodes and stats are whatever is stored so far; the request itself never calls AniList. A title that is not fully stored yet returns them empty, with the header <code>X-Index-Status: partial</code>. Returns 404 if the id is not in the database yet, or if it is an adult title and <code>isAdult</code> is not true.",
             params: [{ name: "id", type: "int", req: true, desc: "AniList id, in the path." }, ADULT],
             example: "/info/20",
           },
@@ -171,7 +171,7 @@
           {
             id: "health", path: "/health",
             summary: "Service and database status.",
-            desc: "Reports <code>status</code>, <code>environment</code> and <code>database</code> (<code>connected</code> or <code>unavailable</code>). With <code>APP_ENVIRONMENT=development</code> it also returns a <code>debug</code> block with catalog counts and the indexer's job timestamps.",
+            desc: "Reports <code>status</code>, <code>environment</code> and <code>database</code> (<code>connected</code> or <code>unavailable</code>). With <code>APP_ENVIRONMENT=development</code> it also returns a <code>debug</code> block with catalog counts and job timestamps.",
             example: "/health",
           },
         ],
