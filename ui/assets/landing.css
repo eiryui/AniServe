@@ -22,6 +22,33 @@ img { max-width: 100%; display: block; }
 code, pre, kbd { font-family: var(--font-mono); }
 :focus-visible { outline: 2px solid var(--cel); outline-offset: 2px; border-radius: 6px; }
 ::selection { background: var(--sakura); color: var(--sakura-ink); }
+
+/* scrollbars: themed to the sakura / violet palette */
+:root {
+  --sb-size: 12px;
+  --sb-track: var(--bg);
+  --sb-thumb: linear-gradient(180deg, var(--sakura), var(--violet));
+  --sb-thumb-hover: linear-gradient(180deg, color-mix(in srgb, var(--sakura) 78%, #fff), color-mix(in srgb, var(--violet) 78%, #fff));
+  --sb-flat: color-mix(in srgb, var(--violet) 55%, transparent);
+}
+/* Chromium, Safari, Edge: gradient thumb that floats inside the track */
+::-webkit-scrollbar { width: var(--sb-size); height: var(--sb-size); background: var(--sb-track); }
+::-webkit-scrollbar-track { background: var(--sb-track); box-shadow: inset 1px 0 0 var(--line); }
+::-webkit-scrollbar-thumb { background: var(--sb-thumb); background-clip: padding-box; border: 3px solid transparent; border-radius: 999px; min-height: 48px; }
+::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:active { background: var(--sakura); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: var(--sb-track); }
+/* nested scrollers (code blocks): slimmer, on the dark code surface */
+.code pre::-webkit-scrollbar { width: 9px; height: 9px; background: transparent; }
+.code pre::-webkit-scrollbar-track { background: transparent; box-shadow: none; }
+.code pre::-webkit-scrollbar-thumb { background: var(--sb-flat); background-clip: padding-box; border-width: 2px; }
+.code pre::-webkit-scrollbar-thumb:hover { background: var(--violet); background-clip: padding-box; }
+.code pre::-webkit-scrollbar-corner { background: transparent; }
+/* Firefox (and any engine without ::-webkit-scrollbar) */
+@supports not selector(::-webkit-scrollbar) {
+  html { scrollbar-color: var(--sakura) var(--sb-track); scrollbar-width: auto; }
+  .code pre { scrollbar-color: var(--sb-flat) transparent; scrollbar-width: thin; }
+}
 .i { width: 1.1em; height: 1.1em; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
 code { font-size: .86em; color: var(--cel); background: color-mix(in srgb, var(--cel) 10%, transparent); padding: 1px 6px; border-radius: 6px; overflow-wrap: anywhere; }
