@@ -1,0 +1,8 @@
+.env
+.git
+__pycache__/
+*.pyc
+logs/
+tests/
+Keepalive/
+.pytest_cache/

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AniServe: a REST API for your AniList database</title>
+<meta name="description" content="A read-only REST API that serves AniList metadata from your own PostgreSQL database: search, filters, schedules and detail pages as fast local JSON. Based on AniList Indexer by JsmaAtom, design by AziF. MIT licensed.">
+<meta name="theme-color" content="#0f1128">
+<meta property="og:title" content="AniServe {{VERSION}}">
+<meta property="og:description" content="AniList metadata served as JSON from your own PostgreSQL database.">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon-64.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/landing.css">
+<script>
+  /* Set the theme before first paint so there is no flash. */
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("aniserve-theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") {
+      t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="/" aria-label="AniServe home"><img class="logo" src="/assets/logo-128.png" alt="" width="32" height="32">AniServe <small>v{{VERSION}}</small></a>
+    <nav class="navlinks" aria-label="Primary">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#endpoints">Endpoints</a>
+      <a href="#conventions">Responses</a>
+      <a href="#run">Run it</a>
+    </nav>
+    <div class="top-actions">
+      <a class="btn btn-sm btn-primary hide-sm" href="#endpoints"><svg class="i"><use href="/assets/icons.svg#i-book"/></svg>Endpoint reference</a>
+      <button class="icon-btn" data-theme-toggle aria-label="Toggle colour theme"><svg class="i"><use href="/assets/icons.svg#i-sun"/></svg></button>
+      <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open menu" aria-expanded="false"><svg class="i"><use href="/assets/icons.svg#i-menu"/></svg></button>
+    </div>
+  </div>
+  <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile">
+    <a href="#features">Features</a><a href="#how">How it works</a><a href="#endpoints">Endpoints</a><a href="#conventions">Responses</a><a href="#run">Run it</a>
+  </nav>
+</header>
+
+<main>
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <a class="status ok" href="/health" target="_blank" rel="noopener"><i class="dot"></i><span>Show API Status</span></a>
+      <h1>Your AniList database, served as a REST API.</h1>
+      <p class="lede">AniServe reads the AniList records already stored in your PostgreSQL database and answers with JSON for search, filters, schedules and detail pages. It is read-only and never calls AniList, so there is no rate-limit surprise at request time.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#endpoints"><svg class="i"><use href="/assets/icons.svg#i-book"/></svg>Browse the endpoints</a>
+        <a class="btn" href="/trending?per_page=20" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-play"/></svg>Call /trending</a>
+      </div>
+      <ul class="facts">
+        <li><svg class="i"><use href="/assets/icons.svg#i-database"/></svg><b id="n-titles">…</b> titles served</li>
+        <li><svg class="i"><use href="/assets/icons.svg#i-layers"/></svg><b id="n-endpoints">22</b> routes</li>
+        <li><svg class="i"><use href="/assets/icons.svg#i-lock"/></svg>No API key</li>
+      </ul>
+    </div>
+
+    <div class="console" aria-label="Live request example">
+      <div class="console-bar">
+        <span class="method">GET</span><code>/trending?per_page=20</code>
+        <span class="console-meta" id="console-meta">waiting…</span>
+      </div>
+      <div class="shelf" id="shelf" aria-live="polite"></div>
+      <div class="console-foot" id="console-foot">Live response from this server: the 10 titles trending right now.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="sec" id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Everything your frontend asks AniList for, served from your own tables</h2>
+      <p>A small read-only service in front of PostgreSQL. Your frontend talks to it, and nothing else.</p>
+    </div>
+    <div class="bento">
+      <article class="tile t-wide">
+        <svg class="i big"><use href="/assets/icons.svg#i-zap"/></svg>
+        <h3>Drop-in metadata API</h3>
+        <p>Routes and response shapes match the AniList endpoints used by Eiryui and the Miruro API, so you point <code>API_BASE</code> at this server and change no frontend code. Reads come straight from your database instead of a rate-limited public API, and the JSON is identical to what AniList Indexer serves.</p>
+      </article>
+      <article class="tile">
+        <svg class="i big"><use href="/assets/icons.svg#i-calendar"/></svg>
+        <h3>Read-only by design</h3>
+        <p>Every database session is opened read-only. AniServe cannot create, change or delete a single row, so it is safe to point at a replica or a read-only role.</p>
+      </article>
+      <article class="tile">
+        <svg class="i big"><use href="/assets/icons.svg#i-clock"/></svg>
+        <h3>Always as fresh as the database</h3>
+        <p>Whatever the indexer stores is what you serve. Countdowns such as <code>timeUntilAiring</code> are recomputed on every response, never served stale.</p>
+      </article>
+      <article class="tile">
+        <svg class="i big"><use href="/assets/icons.svg#i-activity"/></svg>
+        <h3>Never calls AniList</h3>
+        <p>No crawler, no GraphQL client, no API key and no rate-limit budget to manage. The only thing AniServe talks to is PostgreSQL.</p>
+      </article>
+      <article class="tile">
+        <svg class="i big"><use href="/assets/icons.svg#i-shield"/></svg>
+        <h3>Per-IP rate limit</h3>
+        <p>Protect your own API with a fixed-window limit. Clients get a JSON <code>429</code> and standard headers.</p>
+      </article>
+      <article class="tile">
+        <svg class="i big"><use href="/assets/icons.svg#i-terminal"/></svg>
+        <h3>Diagnostics on demand</h3>
+        <p>Development mode adds catalog counts and the indexer's job timestamps to <code>/health</code>, and logs errors to a file.</p>
+      </article>
+      <article class="tile t-wide">
+        <svg class="i big"><use href="/assets/icons.svg#i-database"/></svg>
+        <h3>PostgreSQL and JSONB</h3>
+        <p>Each record is read whole from a JSONB column, with GIN indexes on genres and tags for fast filtering. A connection pool is shared by all requests, and a database that is down at startup is retried instead of leaving the API stuck on 503.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="sec" id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>From your database to your frontend</h2>
+      <p>Something else fills the tables. AniServe only reads them, and requests only ever touch PostgreSQL.</p>
+    </div>
+
+    <ol class="pipe" aria-label="Data flow">
+      <li class="node">
+        <span class="ico"><svg class="i"><use href="/assets/icons.svg#i-globe"/></svg></span>
+        <h3>AniList</h3><p>GraphQL API</p>
+      </li>
+      <li class="link bg" aria-hidden="true"><span>GraphQL</span></li>
+      <li class="node">
+        <span class="ico"><svg class="i"><use href="/assets/icons.svg#i-activity"/></svg></span>
+        <h3>AniList Indexer</h3><p>Separate service, fills the tables</p>
+      </li>
+      <li class="link bg" aria-hidden="true"><span>upsert</span></li>
+      <li class="node">
+        <span class="ico"><svg class="i"><use href="/assets/icons.svg#i-database"/></svg></span>
+        <h3>PostgreSQL</h3><p>JSONB and GIN indexes</p>
+      </li>
+      <li class="link rq" aria-hidden="true"><span>SELECT</span></li>
+      <li class="node">
+        <span class="ico"><svg class="i"><use href="/assets/icons.svg#i-server"/></svg></span>
+        <h3>AniServe</h3><p>Read-only FastAPI, this server</p>
+      </li>
+      <li class="link rq" aria-hidden="true"><span>JSON</span></li>
+      <li class="node">
+        <span class="ico"><svg class="i"><use href="/assets/icons.svg#i-tv"/></svg></span>
+        <h3>Your frontend</h3><p>Any HTTP client</p>
+      </li>
+    </ol>
+
+    <div class="cadence" role="table" aria-label="Tables AniServe reads">
+      <div class="cad head" role="row"><span role="columnheader">Table</span><span role="columnheader">Needed</span><span role="columnheader">Read by</span></div>
+      <div class="cad" role="row"><span role="cell"><b>anilist_catalog</b>One row per title: the full record as JSONB, plus the indexed columns used for filtering and sorting.</span><span role="cell">Yes</span><span role="cell"><code>every data route</code></span></div>
+      <div class="cad" role="row"><span role="cell"><b>anilist_detail_pages</b>Characters and recommendations past the first 25, stored in blocks of 25.</span><span role="cell">Optional</span><span role="cell"><code>/anime/{id}/characters</code> <code>/anime/{id}/recommendations</code></span></div>
+      <div class="cad" role="row"><span role="cell"><b>anilist_index_state</b>The indexer's job timestamps.</span><span role="cell">Optional</span><span role="cell"><code>/health</code> in development mode</span></div>
+    </div>
+    <p class="fine">The tables are created by AniList Indexer, or from <code>schema.sql</code>. AniServe never writes to them.</p>
+  </div>
+</section>
+
+<!-- ENDPOINTS -->
+<section class="sec" id="endpoints">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Endpoint reference</h2>
+      <p>Every route, grouped by job. Open one for its parameters and a request you can copy or run against this server.</p>
+    </div>
+    <div class="groups" id="groups"></div>
+    <div class="alt-docs">
+      <span>Generated from the code:</span>
+      <a href="/docs"><svg class="i"><use href="/assets/icons.svg#i-code"/></svg>Swagger UI</a>
+      <a href="/redoc"><svg class="i"><use href="/assets/icons.svg#i-file"/></svg>ReDoc</a>
+      <a href="/openapi.json"><svg class="i"><use href="/assets/icons.svg#i-list"/></svg>openapi.json</a>
+    </div>
+  </div>
+</section>
+
+<!-- CONVENTIONS -->
+<section class="sec" id="conventions">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Pagination, adult content, limits and errors</h2>
+      <p>The same few rules apply to every route.</p>
+    </div>
+    <div class="flow">
+      <ol class="steps">
+        <li>
+          <span class="n">1</span>
+          <div><h3>Collections are paginated</h3><p>Pass <code>page</code> and <code>per_page</code>. <code>per_page</code> is 1 to 50 and anything outside that returns <code>422</code>. Every list returns <code>page</code>, <code>perPage</code>, <code>total</code>, <code>hasNextPage</code> and <code>results</code>. The exceptions are <code>/anime/{id}/characters</code>, <code>/recommendations</code> and <code>/relations</code>: leave <code>per_page</code> out and you get the whole list in one response.</p></div>
+        </li>
+        <li>
+          <span class="n">2</span>
+          <div><h3>Clients are rate limited</h3><p>Each IP gets <code>API_RATE_LIMIT_RPM</code> requests per window (120 per 60 s by default). Responses carry <code>X-RateLimit-*</code> headers, and an over-limit client gets <code>429</code> with <code>Retry-After</code>.</p></div>
+        </li>
+        <li>
+          <span class="n">3</span>
+          <div><h3>Errors are small JSON</h3><p>Failures return <code>{ "detail": "…" }</code>. <code>404</code> means the id is not indexed (yet), <code>503</code> means there is no database connection, <code>400</code> is an unknown <code>sort</code> and <code>422</code> is a <code>page</code> or <code>per_page</code> out of range.</p></div>
+        </li>
+        <li>
+          <span class="n">4</span>
+          <div><h3>Adult titles need <code>isAdult=true</code></h3><p>Every data route accepts <code>isAdult</code> (all except <code>/health</code>), including <code>/list</code>. With <code>isAdult=true</code> adult titles are included alongside the rest. Omitted or <code>false</code>, they are hidden from lists and search, <code>/info/{id}</code> and <code>/anime/{id}/…</code> return <code>404</code> for them, and they are removed from relations and recommendations.</p></div>
+        </li>
+      </ol>
+
+      <div class="code" id="sample">
+        <div class="code-bar" role="tablist" aria-label="Response example">
+          <button class="tab" role="tab" aria-selected="true" data-key="page">Collection</button>
+          <button class="tab" role="tab" aria-selected="false" data-key="limit">Rate limited</button>
+          <button class="tab" role="tab" aria-selected="false" data-key="error">Error</button>
+          <span class="spacer"></span>
+          <button class="copy" data-copy="#sample-pre"><svg class="i"><use href="/assets/icons.svg#i-copy"/></svg><span>Copy</span></button>
+        </div>
+        <pre id="sample-pre"></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RUN IT -->
+<section class="sec" id="run">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Run it yourself</h2>
+      <p>Python 3.11 or newer and a PostgreSQL database that already holds the AniList tables.</p>
+    </div>
+    <div class="run-grid">
+      <div class="code" id="run-code">
+        <div class="code-bar" role="tablist" aria-label="Install method">
+          <button class="tab" role="tab" aria-selected="true" data-key="local">Local</button>
+          <button class="tab" role="tab" aria-selected="false" data-key="docker">Docker</button>
+          <button class="tab" role="tab" aria-selected="false" data-key="env">.env</button>
+          <span class="spacer"></span>
+          <button class="copy" data-copy="#run-pre"><svg class="i"><use href="/assets/icons.svg#i-copy"/></svg><span>Copy</span></button>
+        </div>
+        <pre id="run-pre"></pre>
+      </div>
+      <aside class="host-card">
+        <svg class="i big"><use href="/assets/icons.svg#i-server"/></svg>
+        <h3>Before you start</h3>
+        <ul>
+          <li class="ok"><svg class="i"><use href="/assets/icons.svg#i-check"/></svg><span>Set <code>DATABASE_URL</code> to the PostgreSQL that AniList Indexer fills</span></li>
+          <li class="ok"><svg class="i"><use href="/assets/icons.svg#i-check"/></svg><span>An empty or half-filled database is fine: the API serves whatever is stored so far</span></li>
+          <li class="ok"><svg class="i"><use href="/assets/icons.svg#i-check"/></svg><span>Set <code>API_RATE_LIMIT_TRUST_PROXY=true</code> only behind a trusted reverse proxy</span></li>
+          <li class="no"><svg class="i"><use href="/assets/icons.svg#i-x"/></svg><span>Do not expose <code>APP_ENVIRONMENT=development</code> publicly</span></li>
+        </ul>
+        <p>Development mode adds catalog counts and job timestamps to <code>/health</code> and writes errors to <code>logs/error.txt</code>.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- CREDITS -->
+<section class="sec">
+  <div class="wrap">
+    <div class="docs-cta">
+      <div>
+        <h2>Built on AniList Indexer by JsmaAtom, designed by AziF</h2>
+        <p>AniServe is open source under the MIT License and keeps the original copyright notice. Use it, fork it and ship it, as long as that notice stays with the code.</p>
+      </div>
+      <div class="cta">
+        <a class="btn btn-primary" href="/license"><svg class="i"><use href="/assets/icons.svg#i-file"/></svg>Read the license</a>
+        <a class="btn" href="https://github.com/jsmatom" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-github"/></svg>JsmaAtom</a>
+        <a class="btn" href="https://github.com/az4if" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-sparkle"/></svg>AziF</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="footer-in">
+    <div>
+      <a class="brand" href="/"><img class="logo" src="/assets/logo-128.png" alt="" width="32" height="32">AniServe</a>
+      <p>AniList metadata, read from PostgreSQL and served as JSON. Version {{VERSION}}.</p>
+    </div>
+    <div>
+      <h4>Documentation</h4>
+      <ul>
+        <li><a href="#endpoints"><svg class="i"><use href="/assets/icons.svg#i-book"/></svg>Endpoint reference</a></li>
+        <li><a href="/docs"><svg class="i"><use href="/assets/icons.svg#i-code"/></svg>Swagger UI</a></li>
+        <li><a href="/redoc"><svg class="i"><use href="/assets/icons.svg#i-file"/></svg>ReDoc</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Project</h4>
+      <ul>
+        <li><a href="/license"><svg class="i"><use href="/assets/icons.svg#i-heart"/></svg>MIT License</a></li>
+        <li><a href="/health"><svg class="i"><use href="/assets/icons.svg#i-activity"/></svg>Health</a></li>
+        <li><a href="https://anilist.co" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-external"/></svg>AniList</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>People</h4>
+      <ul>
+        <li><a href="https://github.com/jsmatom" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-terminal"/></svg>JsmaAtom, original developer</a></li>
+        <li><a href="https://github.com/az4if" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-sparkle"/></svg>AziF, design</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="credit">
+    <span>Based on AniList Indexer by <a href="https://github.com/jsmatom" target="_blank" rel="noopener">JsmaAtom</a>. Designed by <a href="https://github.com/az4if" target="_blank" rel="noopener">AziF</a>. Released under the <a href="/license">MIT License</a>.</span>
+    <span>Not affiliated with AniList. Metadata comes from the AniList API.</span>
+  </div>
+</footer>
+
+<script src="/assets/endpoints.js"></script>
+<script src="/assets/landing.js"></script>
+</body>
+</html>
