@@ -381,7 +381,7 @@ async def landing():
     """Landing page and endpoint reference (ui/landing.html, designed by AziF)."""
     html = await asyncio.to_thread((UI_DIR / "landing.html").read_text, encoding="utf-8")
     # Version the asset URLs by file mtime so browsers never keep a stale landing.js/css.
-    for name in ("landing.js", "landing.css", "endpoints.js"):
+    for name in ("landing.js", "landing.css", "endpoints.js", "scene.js"):
         try: stamp = int((UI_DIR / "assets" / name).stat().st_mtime)
         except OSError: continue
         html = html.replace(f"/assets/{name}", f"/assets/{name}?v={stamp}")
