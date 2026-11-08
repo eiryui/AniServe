@@ -237,7 +237,6 @@ body{background:radial-gradient(120% 60% at 70% 0%,#1a0f38 0,transparent 60%),va
 .halo{position:absolute;left:69%;top:50%;width:70vmin;height:70vmin;margin:-35vmin;border-radius:50%;background:radial-gradient(closest-side,rgba(139,92,246,.4),transparent);pointer-events:none}
 .hero-copy{position:absolute;left:max(20px,calc((100vw - 1180px)/2 + 20px));top:50%;transform:translateY(-50%);max-width:520px;z-index:3;will-change:transform,opacity}
 .hero-copy h1{font-size:clamp(2.3rem,4.6vw,3.9rem)}
-.hint{position:absolute;bottom:22px;left:50%;translate:-50% 0;color:var(--faint);font-size:.8rem;z-index:3;transition:opacity .3s}
 .tunnel{height:520vh}.rail{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
 .tc{position:absolute;left:50%;top:50%;width:clamp(120px,14vw,200px);aspect-ratio:2/3;margin:calc(clamp(120px,14vw,200px)*-.75) 0 0 calc(clamp(120px,14vw,200px)/-2);transform:translate3d(calc(var(--x)*1vw),calc(var(--y)*1vh),calc(var(--z)*-1px)) rotateY(calc(var(--x)*-.9deg))}
 .tc .f{position:absolute;inset:0}

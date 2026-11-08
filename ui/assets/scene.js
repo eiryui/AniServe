@@ -34,7 +34,7 @@
   }).catch(() => { /* keep the stand-in posters */ });
 
   /* scroll progress per scene (0 to 1 while its sticky stage is pinned) */
-  const scenes = $$(".scene"), reveals = $$("[data-r]"), logo = $("#logo3d"), copy = $("#hero-copy"), hint = $("#hint"), caps = $$(".cap");
+  const scenes = $$(".scene"), reveals = $$("[data-r]"), logo = $("#logo3d"), copy = $("#hero-copy"), caps = $$(".cap");
   let mx = 0, my = 0, sx = 0, sy = 0, vh = innerHeight;
   addEventListener("resize", () => { vh = innerHeight; });
   addEventListener("pointermove", (e) => { mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; }, { passive: true });
@@ -55,7 +55,6 @@
         copy.style.opacity = clamp(1 - p * 8, 0, 1);
         copy.style.transform = "translateY(calc(" + (innerWidth > 860 ? "-50%" : "0px") + " - " + p * 140 + "px))";
         copy.style.pointerEvents = p > 0.1 ? "none" : "";
-        hint.style.opacity = p > 0.03 ? 0 : 1;
       } else if (s.id === "tunnel") {
         rail.style.transform = "translateZ(" + (p * ((T - 1) * GAP + 700)) + "px) rotateY(" + sx * 6 + "deg) rotateX(" + -sy * 4 + "deg)";
         caps.forEach((c, k) => c.style.setProperty("--o", clamp(1.15 - Math.abs(p - (0.12 + k * 0.38)) * 6.5, 0, 1).toFixed(3)));
