@@ -1,4 +1,4 @@
-"""Deterministic fixture catalog for tests: realistic AniList records written with the same column mapping the indexer uses.
+"""Deterministic fixture catalog for tests: realistic AniList records written with the same column mapping as the database dump.
 
   python3 tests/seed.py DATABASE_URL [COUNT]     # create the schema and fill a scratch database (its name must contain 'test')
 

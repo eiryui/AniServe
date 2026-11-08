@@ -1,10 +1,10 @@
 """AniServe: a read-only REST API that serves AniList metadata straight from a PostgreSQL database.
 
-AniServe is the PostgreSQL -> JSON half of AniList Indexer (routes, query logic, response shapes and ordering are identical).
-It never talks to AniList and never writes to the database: point DATABASE_URL at a database that is filled by AniList Indexer
-(or any process that keeps the same tables, see schema.sql) and every route answers exactly as the indexer's own API does.
+AniServe is a read-only PostgreSQL -> JSON service (Eiryui / Miruro-compatible routes and response shapes).
+It never talks to AniList and never writes to the database: point DATABASE_URL at a database restored from the AniList database dump
+(or any process that keeps the same tables, see schema.sql) and every route answers from it.
 
-Derived from AniList Indexer by JsmaAtom, landing page designed by AziF. Released under the MIT License (see LICENSE).
+Made by AziF. Released under the MIT License (see LICENSE).
 """
 import asyncio, json, logging, math, os, re, threading, time
 from concurrent.futures import ThreadPoolExecutor
@@ -40,12 +40,12 @@ if IS_DEVELOPMENT and not LOG.handlers:
         LOG.addHandler(error_handler)
     except OSError: pass  # read-only filesystem: errors still go to stdout logs
 
-# AniList serves characters / recommendations in pages of 25, and the indexer stores them in blocks of 25: block 1 on the record itself,
+# AniList serves characters / recommendations in pages of 25, and they are stored in blocks of 25: block 1 on the record itself,
 # blocks 2.. in anilist_detail_pages. The API reads them back with the same arithmetic.
 BLOCK = 25
 DETAIL_KEYS = {"characters": "edges", "recommendations": "nodes"}
 EXTRA_KEYS = ("staff", "externalLinks", "streamingEpisodes", "stats")
-# What a title reports for the extras until the indexer's deep-index extras job has been through it (so clients can read the keys unconditionally).
+# What a title reports for the extras until they have been stored for it (so clients can read the keys unconditionally).
 EXTRA_EMPTY = {"staff": {"edges": []}, "externalLinks": [], "streamingEpisodes": [], "stats": {"scoreDistribution": [], "statusDistribution": []}}
 
 # Detect dead TCP connections quickly (managed Postgres drops idle ones).
@@ -139,7 +139,7 @@ class ApiRateLimiter:
             retry_after = max(1, int(self.window - (now - started)))
             return count <= self.limit, remaining, retry_after
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.6.3"
 BASE_DIR = Path(__file__).resolve().parent
 UI_DIR = BASE_DIR / "ui"
 CATALOG_FILE = BASE_DIR / "genres-tags.js"
@@ -226,7 +226,7 @@ app.add_middleware(CORSMiddleware,allow_origins=origins,allow_credentials=True,a
 @app.exception_handler(psycopg2.errors.UndefinedTable)
 async def tables_missing(request: Request, exc: Exception):
     LOG.error("Catalog tables are missing: %s", str(exc).strip().splitlines()[0])
-    return JSONResponse(status_code=503, content={"detail": "catalog tables missing; fill the database with AniList Indexer or load schema.sql"})
+    return JSONResponse(status_code=503, content={"detail": "catalog tables missing; restore the AniList database dump or load schema.sql"})
 @app.exception_handler(psycopg2.OperationalError)
 @app.exception_handler(psycopg2.InterfaceError)
 async def database_down(request: Request, exc: Exception):

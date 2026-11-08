@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AniServe: a REST API for your AniList database</title>
-<meta name="description" content="A read-only REST API that serves AniList metadata from your own PostgreSQL database: search, filters, schedules and detail pages as fast local JSON. Original code by JsmaAtom, design by AziF. MIT licensed.">
+<meta name="description" content="A read-only REST API that serves AniList metadata from your own PostgreSQL database: search, filters, schedules and detail pages as fast local JSON. Made by AziF. MIT licensed.">
 <meta name="theme-color" content="#08050f">
 <meta property="og:title" content="AniServe {{VERSION}}">
 <meta property="og:description" content="AniList metadata served as JSON from your own PostgreSQL database.">
@@ -213,12 +213,13 @@
   <div class="wrap">
     <div class="sec-head">
       <h2>Run it yourself</h2>
-      <p>Python 3.11 or newer and a PostgreSQL database that already holds the AniList tables.</p>
+      <p>Python 3.11 or newer and a PostgreSQL database restored from the AniList dump.</p>
     </div>
     <div class="run-grid">
       <div class="code" id="run-code">
         <div class="code-bar" role="tablist" aria-label="Install method">
-          <button class="tab" role="tab" aria-selected="true" data-key="local">Local</button>
+          <button class="tab" role="tab" aria-selected="true" data-key="db">Database</button>
+          <button class="tab" role="tab" aria-selected="false" data-key="local">Local</button>
           <button class="tab" role="tab" aria-selected="false" data-key="docker">Docker</button>
           <button class="tab" role="tab" aria-selected="false" data-key="env">.env</button>
           <span class="spacer"></span>
@@ -230,7 +231,8 @@
         <svg class="i big"><use href="/assets/icons.svg#i-server"/></svg>
         <h3>Before you start</h3>
         <ul>
-          <li class="ok"><svg class="i"><use href="/assets/icons.svg#i-check"/></svg><span>Set <code>DATABASE_URL</code> to the PostgreSQL that holds the AniList tables</span></li>
+          <li class="ok"><svg class="i"><use href="/assets/icons.svg#i-check"/></svg><span>Restore the <a class="ulink" href="https://github.com/eiryui/AniList-DB-Dump/releases/latest" target="_blank" rel="noopener">latest AniList database dump</a> into any local or remote PostgreSQL. It is rebuilt every Saturday</span></li>
+          <li class="ok"><svg class="i"><use href="/assets/icons.svg#i-check"/></svg><span>Set <code>DATABASE_URL</code> to that database and start AniServe</span></li>
           <li class="ok"><svg class="i"><use href="/assets/icons.svg#i-check"/></svg><span>An empty or half-filled database is fine: the API serves whatever is stored so far</span></li>
           <li class="ok"><svg class="i"><use href="/assets/icons.svg#i-check"/></svg><span>Set <code>API_RATE_LIMIT_TRUST_PROXY=true</code> only behind a trusted reverse proxy</span></li>
           <li class="no"><svg class="i"><use href="/assets/icons.svg#i-x"/></svg><span>Do not expose <code>APP_ENVIRONMENT=development</code> publicly</span></li>
@@ -246,12 +248,11 @@
   <div class="wrap">
     <div class="docs-cta">
       <div>
-        <h2>Original code by JsmaAtom, designed by AziF</h2>
-        <p>AniServe is open source under the MIT License and keeps the original copyright notice. Use it, fork it and ship it, as long as that notice stays with the code.</p>
+        <h2>Made by AziF</h2>
+        <p>AniServe is open source under the MIT License. Use it, fork it and ship it, as long as the license notice stays with the code.</p>
       </div>
       <div class="cta">
         <a class="btn btn-primary" href="/license"><svg class="i"><use href="/assets/icons.svg#i-file"/></svg>Read the license</a>
-        <a class="btn" href="https://github.com/jsmatom" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-github"/></svg>JsmaAtom</a>
         <a class="btn" href="https://github.com/az4if" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-sparkle"/></svg>AziF</a>
       </div>
     </div>
@@ -284,13 +285,12 @@
     <div>
       <h4>People</h4>
       <ul>
-        <li><a href="https://github.com/jsmatom" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-terminal"/></svg>JsmaAtom, original developer</a></li>
-        <li><a href="https://github.com/az4if" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-sparkle"/></svg>AziF, design</a></li>
+        <li><a href="https://github.com/az4if" target="_blank" rel="noopener"><svg class="i"><use href="/assets/icons.svg#i-sparkle"/></svg>AziF, developer and designer</a></li>
       </ul>
     </div>
   </div>
   <div class="credit">
-    <span>Original code by <a href="https://github.com/jsmatom" target="_blank" rel="noopener">JsmaAtom</a>. Designed by <a href="https://github.com/az4if" target="_blank" rel="noopener">AziF</a>. Released under the <a href="/license">MIT License</a>.</span>
+    <span>Made by <a href="https://github.com/az4if" target="_blank" rel="noopener">AziF</a>. Released under the <a href="/license">MIT License</a>.</span>
     <span>Not affiliated with AniList. Metadata comes from the AniList API.</span>
   </div>
 </footer>

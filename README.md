@@ -6,7 +6,7 @@
 
 **Your AniList database, served as a REST API.**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-6fe3ff?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/version-1.6.3-6fe3ff?style=for-the-badge)](#)
 [![Python](https://img.shields.io/badge/python-3.11%2B-8f82ff?style=for-the-badge&logo=python&logoColor=white)](#quickstart)
 [![FastAPI](https://img.shields.io/badge/FastAPI-async-7df0b8?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-read--only-2a6cff?style=for-the-badge&logo=postgresql&logoColor=white)](#the-database)
@@ -14,7 +14,7 @@
 
 [Quickstart](#quickstart) · [Docker](#docker) · [Configuration](#configuration) · [The database](#the-database) · [Endpoints](#endpoint-reference) · [Testing](#testing) · [Troubleshooting](#troubleshooting)
 
-**Based on [AniList Indexer](https://github.com/jsmatom) by JsmaAtom** · **Landing page designed by [AziF](https://github.com/az4if)**
+**Made by [AziF](https://github.com/az4if)**
 
 </div>
 
@@ -22,20 +22,20 @@
 
 ## What it is
 
-AniServe is the **PostgreSQL → REST/JSON** half of AniList Indexer, as a project of its own. It reads AniList records that are already stored in a PostgreSQL database and serves them over the same routes, with the same query logic and the same response shapes. Point your frontend's `API_BASE` at it and nothing else changes.
+AniServe is a **PostgreSQL → REST/JSON** service. It reads AniList records that are already stored in a PostgreSQL database and serves them over the same routes, with the same query logic and the same response shapes. Point your frontend's `API_BASE` at it and nothing else changes.
 
 ```text
 PostgreSQL (anilist_catalog, ...)  ──▶  AniServe  ──▶  your frontend
         ▲
-        └── filled by AniList Indexer (or anything that keeps the same tables, see schema.sql)
+        └── restored from the AniList database dump (see "Get the database" below)
 ```
 
-- **Same output.** Every route returns the same JSON, field for field and in the same order, as the AniList Indexer API. [`tools/parity.py`](#testing) proves it against your own database.
+- **Same output.** Routes and response shapes match the Eiryui and Miruro API, so existing frontends keep working.
 - **Read-only.** Every database session is opened read-only, so AniServe cannot create, change or delete a row. A read replica or a read-only role is enough.
 - **No crawler.** It never calls AniList: no GraphQL client, no request budget, no background jobs, no advisory lock. You can run as many copies as you like.
-- **Nothing to migrate.** It uses the tables AniList Indexer already created. No schema changes.
+- **Nothing to migrate.** It reads the tables from the database dump as they are. No schema changes.
 
-AniServe does **not** fill the database. If you do not have a filled database yet, run AniList Indexer (or load your own data into the tables in [`schema.sql`](schema.sql)) first.
+AniServe does **not** fill the database, it only reads it. Restore a dump first, as described next.
 
 | Feature | Details |
 |---|---|
@@ -44,6 +44,35 @@ AniServe does **not** fill the database. If you do not have a filled database ye
 | **Compression** | Brotli with a gzip fallback. |
 | **Resilient startup** | If the database is not reachable yet, AniServe keeps retrying in the background instead of serving `503` until you restart it. |
 | **Docs built in** | A landing page with a live poster shelf and an endpoint reference, plus Swagger UI and ReDoc. |
+
+---
+
+## Get the database
+
+The latest AniList database dump is published as a GitHub release, rebuilt automatically every Saturday (00:00 UTC):
+
+**<https://github.com/eiryui/AniList-DB-Dump/releases/latest>**
+
+Each release comes in four formats:
+
+| File | Use it with | For AniServe |
+|---|---|---|
+| `.dump` | `pg_restore` (PostgreSQL custom format) | **yes**, the smallest and fastest |
+| `.sql` | `psql` (plain SQL) | **yes** |
+| `.duckdb` | DuckDB | no, for analysis in DuckDB |
+| `.sqlite` | SQLite | no, for analysis in SQLite |
+
+AniServe reads PostgreSQL only, so restore the `.dump` or the `.sql` into any PostgreSQL database, local or remote:
+
+```sh
+# .dump
+pg_restore --no-owner -d "$DATABASE_URL" anilist-db-dump-<date>.dump
+
+# .sql
+psql "$DATABASE_URL" -f anilist-db-dump-<date>.sql
+```
+
+Then set `DATABASE_URL` to that same database and start AniServe. To refresh the data, restore the newest dump the same way after each Saturday release.
 
 ---
 
@@ -110,13 +139,13 @@ Requests under `/assets`, `/favicon.ico` and CORS `OPTIONS` preflights are not c
 
 ## The database
 
-AniServe reads three tables. [`schema.sql`](schema.sql) holds their definition (PostgreSQL 12 or newer, for the generated columns); AniList Indexer creates exactly these.
+AniServe reads three tables. [`schema.sql`](schema.sql) holds their definition (PostgreSQL 12 or newer, for the generated columns); restoring the dump gives you these tables.
 
 | Table | Needed | Holds | Read by |
 |---|---|---|---|
 | `anilist_catalog` | yes | One row per title: the full record as `payload` JSONB, plus the columns used to filter and sort (`status`, `season_year`, `season`, `format`, `popularity`, `trending`, `genres`, `tags`, `next_airing_at`, generated `is_adult`, `favourites`, `average_score`, `media_updated_at`, `start_key`). | every data route |
 | `anilist_detail_pages` | no | Characters and recommendations past the first 25, one row per block of 25. | `/anime/{id}/characters`, `/anime/{id}/recommendations` |
-| `anilist_index_state` | no | The indexer's job timestamps. | `/health` in development mode |
+| `anilist_index_state` | no | Job timestamps. | `/health` in development mode |
 
 If `anilist_detail_pages` does not exist, AniServe serves only the 25 items stored on each record. If `anilist_catalog` does not exist, data routes answer `503` with a message saying so.
 
@@ -124,14 +153,14 @@ To prepare an empty database (for tests, or to load data from another source): `
 
 ### Characters and recommendations: blocks of 25
 
-AniList serves characters and recommendations 25 at a time, and the indexer stores them the same way: block 1 sits on the title's record in `anilist_catalog`, blocks 2, 3, ... are rows in `anilist_detail_pages`. AniServe cuts the window a request asks for out of those blocks:
+AniList serves characters and recommendations 25 at a time, and they are stored the same way: block 1 sits on the title's record in `anilist_catalog`, blocks 2, 3, ... are rows in `anilist_detail_pages`. AniServe cuts the window a request asks for out of those blocks:
 
 1. `/anime/{id}/characters` and `/anime/{id}/recommendations` cut the requested window from the blocks. The client's `per_page` does not matter: items 21 to 30 use blocks 1 and 2, items 51 to 100 use blocks 3 and 4. With `per_page` left out the window is the whole list, so every stored item comes back in one response.
 2. A block that is not in the database is not served. The response holds the items stored so far (possibly none), `total` is still AniList's real total, and `hasNextPage` is only true when the next item exists.
 3. Every one of these routes, and `/info`, sets an **`X-Index-Status`** header: `complete` when everything for that title is stored, `partial` otherwise.
-4. `/info` always returns `staff`, `externalLinks`, `streamingEpisodes` and `stats`; for a title the indexer has not reached they are empty (and `X-Index-Status` is `partial`), so clients can read them without checks.
+4. `/info` always returns `staff`, `externalLinks`, `streamingEpisodes` and `stats`; for a title that is not fully stored yet they are empty (and `X-Index-Status` is `partial`), so clients can read them without checks.
 
-Other things AniServe does on the way out, exactly as the indexer's API does: object keys are put back into one fixed, readable order (PostgreSQL's JSONB reorders them), `timeUntilAiring` is recomputed from `airingAt` on every response, missing cover colours on related titles are filled in from the catalog, and adult titles are removed from relations and recommendations unless `isAdult=true`.
+Other things AniServe does on the way out, object keys are put back into one fixed, readable order (PostgreSQL's JSONB reorders them), `timeUntilAiring` is recomputed from `airingAt` on every response, missing cover colours on related titles are filled in from the catalog, and adult titles are removed from relations and recommendations unless `isAdult=true`.
 
 ---
 
@@ -175,7 +204,7 @@ All routes are `GET`. Collections take `page` (default `1`, minimum 1) and `per_
 
 | Route | Contents |
 |---|---|
-| `/info/{id}` | The full record for an AniList id, including staff, external links, streaming episodes and score stats. `404` if it is not in the database. Staff, links, streaming episodes and stats are whatever the indexer has stored for the title; AniServe never calls AniList, and a title the indexer has not reached returns them empty with `X-Index-Status: partial`. Voice actors are Japanese only here. |
+| `/info/{id}` | The full record for an AniList id, including staff, external links, streaming episodes and score stats. `404` if it is not in the database. Staff, links, streaming episodes and stats are whatever is stored for the title; AniServe never calls AniList, and a title that is not fully stored returns them empty with `X-Index-Status: partial`. Voice actors are Japanese only here. |
 | `/anime/{id}/characters` | Characters with voice actors (all languages). **Without `per_page` every character is returned** (`page` 1, `perPage` = `total`). With `per_page` (1 to 50) it pages normally with `page` (default 1). Stored in blocks of 25: the first block is on the catalog record, later blocks are in `anilist_detail_pages` and only served once stored (`X-Index-Status: partial` until then). See [Characters and recommendations](#characters-and-recommendations-blocks-of-25). |
 | `/anime/{id}/relations` | Related media (sequels, prequels, adaptations and so on). All of them are returned unless you pass `per_page` (1 to 50, with `page`), which adds `page`, `perPage`, `total` and `hasNextPage` to the body. |
 | `/anime/{id}/recommendations` | Recommendations with the real `total`. **Without `per_page` every recommendation is returned**: `/anime/21/recommendations` with a `total` of 100 returns all 100. With `per_page` (1 to 50) it pages normally with `page` (default 1). Same blocks of 25 and the same `X-Index-Status` header as characters. `/info` still lists the first 10. |
@@ -214,7 +243,7 @@ Collection items use the slim list shape (no description, characters, relations 
 
 **Detail routes** return `characters`, `relations` or `recommendations` arrays inside their own envelopes. `/anime/{id}/relations` also returns the show's `id` and `title`.
 
-**No `per_page`, no paging.** On `/anime/{id}/characters`, `/anime/{id}/recommendations` and `/anime/{id}/relations`, leaving `per_page` out returns the whole list at once. For characters and recommendations the envelope is `{ "page": 1, "perPage": <total>, "total": <total>, "hasNextPage": false, ... }`, and `page=2` or higher is empty because everything is on page 1. `total` is AniList's real total, so while the indexer is still working on a title the array can hold fewer items than `total` and the `X-Index-Status` header says `partial`; adult entries are left out unless `isAdult=true`, so the array can also be shorter than `total` for that reason.
+**No `per_page`, no paging.** On `/anime/{id}/characters`, `/anime/{id}/recommendations` and `/anime/{id}/relations`, leaving `per_page` out returns the whole list at once. For characters and recommendations the envelope is `{ "page": 1, "perPage": <total>, "total": <total>, "hasNextPage": false, ... }`, and `page=2` or higher is empty because everything is on page 1. `total` is AniList's real total, so while a title is only partly stored the array can hold fewer items than `total` and the `X-Index-Status` header says `partial`; adult entries are left out unless `isAdult=true`, so the array can also be shorter than `total` for that reason.
 
 ---
 
@@ -245,23 +274,6 @@ An over-limit client receives `429` with `Retry-After`:
 
 ---
 
-## What is different from AniList Indexer
-
-Only what a read-only service has to change. Every data route is byte-for-byte the same.
-
-| | AniList Indexer | AniServe |
-|---|---|---|
-| Database access | Reads and writes | Read-only sessions |
-| Creates tables on start | Yes | No (use `schema.sql`) |
-| Calls AniList | Yes, in the background | Never |
-| `/health` | `status`, `environment`, `indexer`, `indexer_state`, `database` | `status`, `environment`, `database` |
-| Missing tables or database down | `500` | `503` with `{"detail": ...}` |
-| Database unreachable at startup | stays unavailable until restart | retries in the background |
-| Settings | `ANILIST_*`, `ANILIST_DEEP_INDEX_*` and the rest | only the ones in [Configuration](#configuration) |
-| Default pool size | 20 | 10 |
-
----
-
 ## Testing
 
 The tests run against a real PostgreSQL, because the routes are SQL. Use a scratch database: it is emptied and re-seeded (the seeder refuses databases whose name does not contain `test`).
@@ -273,16 +285,6 @@ TEST_DATABASE_URL=postgresql://postgres@localhost:5432/aniserve_test pytest
 ```
 
 Without `TEST_DATABASE_URL` the tests are skipped. [`tests/seed.py`](tests/seed.py) builds a deterministic fixture catalog (adult and regular titles, every status and format, airing schedules, relations and recommendations to known and unknown titles, partly indexed character and recommendation blocks).
-
-**Prove it matches AniList Indexer on your own data.** `tools/parity.py` imports the original `app.py` (without starting its indexer, so nothing is fetched or written), sends both apps the same requests and compares status code, body bytes and headers:
-
-```sh
-pip install -r requirements-dev.txt        # plus the original project's requirements
-DATABASE_URL=postgresql://... python tools/parity.py /path/to/AniList-Indexer
-API_STRICT_MIRURO_SHAPE=false DATABASE_URL=postgresql://... python tools/parity.py /path/to/AniList-Indexer
-```
-
-It covers every route, every sort, filters, paging edges, adult on and off and the 4xx errors, for a sample of your titles (`--sample N`, `0` for all). Exit code `0` means identical. When this port was made, the comparison ran 14,367 requests in each of the two shape modes against a seeded database, with no differences.
 
 ---
 
@@ -297,7 +299,6 @@ AniServe/
 │   ├── landing.html       # Landing page (served at /)
 │   └── assets/            # landing.css, landing.js, endpoints.js (endpoint reference data), icons, logo
 ├── tests/                 # pytest suite, conftest and the fixture seeder
-├── tools/parity.py        # Byte-for-byte comparison with AniList Indexer
 ├── Keepalive/             # Optional Cloudflare Worker that pings /health so a free-tier host stays awake
 ├── requirements.txt
 ├── requirements-dev.txt
@@ -339,14 +340,14 @@ AniServe/
 <details>
 <summary><b>Data routes return <code>503 catalog tables missing</code></b></summary>
 
-The database is reachable but has no `anilist_catalog` table. Fill it with AniList Indexer, or create the tables with `psql "$DATABASE_URL" -f schema.sql` and load your data.
+The database is reachable but has no `anilist_catalog` table. Restore the [AniList database dump](https://github.com/eiryui/AniList-DB-Dump/releases/latest) into it, or create the tables with `psql "$DATABASE_URL" -f schema.sql` and load your data.
 
 </details>
 
 <details>
 <summary><b>Results are empty, or <code>/info/{id}</code> returns 404</b></summary>
 
-The database does not hold that title (yet). AniServe serves whatever is stored, so an empty or half-filled database gives empty or partial answers. In development mode `/health` shows the catalog count and the indexer's job timestamps.
+The database does not hold that title (yet). AniServe serves whatever is stored, so an empty or half-filled database gives empty or partial answers. In development mode `/health` shows the catalog count and job timestamps.
 
 </details>
 
@@ -377,15 +378,15 @@ The page loads its fonts from Google Fonts. Offline or behind a blocker, it fall
 
 | Role | Who |
 |---|---|
-| Original AniList Indexer, API logic and response shapes | **[JsmaAtom](https://github.com/jsmatom)** |
-| Landing page and design | **[AziF](https://github.com/az4if)** |
+| Code and design | **[AziF](https://github.com/az4if)** |
+| Database dump | [eiryui/AniList-DB-Dump](https://github.com/eiryui/AniList-DB-Dump) |
 | Anime metadata | [AniList](https://anilist.co) |
 
 ---
 
 ## License
 
-Released under the [MIT License](LICENSE). Copyright (c) 2026 JsmaAtom. AniServe is derived from AniList Indexer and keeps its copyright notice.
+Released under the [MIT License](LICENSE). See the license file for the copyright notice.
 
 ---
 

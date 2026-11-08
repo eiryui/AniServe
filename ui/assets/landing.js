@@ -131,6 +131,14 @@ X-RateLimit-Reset: 23
 { "detail": "catalog database unavailable" }` },
   });
   tabs("#run-code", "#run-pre", {
+    db: { text: `# Rebuilt every Saturday: https://github.com/eiryui/AniList-DB-Dump/releases/latest
+# Download the .dump (or .sql) from that release, then restore it into PostgreSQL:
+
+pg_restore --no-owner -d "$DATABASE_URL" anilist-db-dump-<date>.dump
+# or: psql "$DATABASE_URL" -f anilist-db-dump-<date>.sql
+
+# .duckdb and .sqlite are for DuckDB and SQLite; AniServe reads PostgreSQL.
+# Then point AniServe at the same DATABASE_URL.` },
     local: { text: `cd AniServe
 cp .env.example .env     # set DATABASE_URL
 pip install -r requirements.txt

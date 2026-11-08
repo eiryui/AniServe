@@ -1,4 +1,4 @@
--- Tables AniServe reads. AniList Indexer creates and fills them; AniServe itself never writes to them.
+-- Tables AniServe reads. Restore the AniList database dump into them; AniServe itself never writes to them.
 -- Use this file to prepare an empty database (for tests, or for loading data from another source):
 --   psql "$DATABASE_URL" -f schema.sql
 -- Requires PostgreSQL 12 or newer (generated columns).
@@ -23,5 +23,5 @@ CREATE INDEX IF NOT EXISTS anilist_catalog_tags_idx ON anilist_catalog USING GIN
 -- (page 1 is items 1-25, page 2 items 26-50, ...). Optional: without it AniServe serves only the 25 items stored on each record.
 CREATE TABLE IF NOT EXISTS anilist_detail_pages (id INTEGER NOT NULL, kind TEXT NOT NULL, page INTEGER NOT NULL, items JSONB NOT NULL, total INTEGER, fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (id, kind, page));
 
--- Written by the indexer for its own bookkeeping; AniServe only reads it for the development-mode /health diagnostics. Optional.
+-- Job bookkeeping; AniServe only reads it for the development-mode /health diagnostics. Optional.
 CREATE TABLE IF NOT EXISTS anilist_index_state (key TEXT PRIMARY KEY, value JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT now());

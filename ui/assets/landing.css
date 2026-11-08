@@ -1,4 +1,4 @@
-/* AniServe: landing page styles. Design by AziF (from AniList Indexer). */
+/* AniServe: landing page styles. Design by AziF. */
 :root {
   --bg: #0f1128; --bg-2: #14173a; --surface: #1a1e45; --surface-2: #232857;
   --line: rgba(190, 196, 255, .14); --line-2: rgba(190, 196, 255, .26);
@@ -278,3 +278,5 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(2.4rem
 .facts li { display: flex; align-items: center; gap: 8px; }
 .facts b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .facts .i { color: var(--cel); }
+
+.ulink{color:var(--cel);text-decoration:underline;text-underline-offset:3px}.ulink:hover{color:#fff}
