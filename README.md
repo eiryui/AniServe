@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="ui/assets/logo.png" alt="AniServe" width="120" height="120">
+<img src="ui/assets/logo.png" alt="AniServe" width="240" height="240">
 
 # AniServe
 
