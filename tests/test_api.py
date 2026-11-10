@@ -154,17 +154,20 @@ def test_detail_without_per_page_returns_everything_indexed(client, ids, kind):
     i, total = _with_total(client, ids, kind, 26)
     r = get(client, f"/anime/{i}/{kind}", isAdult="true")
     body = r.json()
-    assert body["page"] == 1 and body["perPage"] == body["total"] == total and body["hasNextPage"] is False
+    assert list(body) == [kind]  # plain body: no page, perPage, total or hasNextPage unless per_page is passed
     assert len(body[kind]) <= total
     assert r.headers["x-index-status"] in {"complete", "partial"}
-    assert get(client, f"/anime/{i}/{kind}", isAdult="true", page=2).json()[kind] == []
+    assert get(client, f"/anime/{i}/{kind}", isAdult="true", page=2).json()[kind] == body[kind]  # page is ignored without per_page
+    paged = get(client, f"/anime/{i}/{kind}", isAdult="true", per_page=1).json()
+    assert sorted(paged) == sorted(["page", "perPage", "total", "hasNextPage", kind]) and paged["total"] == total
 
 
 @pytest.mark.parametrize("kind", ["characters", "recommendations"])
 def test_detail_paging_is_cut_from_blocks_of_25(client, ids, kind):
     for i in ids:
         whole = get(client, f"/anime/{i}/{kind}", isAdult="true")
-        if whole.headers["x-index-status"] == "complete" and whole.json()["total"] > 40: break
+        total = get(client, f"/anime/{i}/{kind}", isAdult="true", per_page=1).json()["total"]
+        if whole.headers["x-index-status"] == "complete" and total > 40: break
     else: pytest.skip("no complete title with more than 40 items")
     items = whole.json()[kind]
     first = get(client, f"/anime/{i}/{kind}", isAdult="true", per_page=30, page=1).json()

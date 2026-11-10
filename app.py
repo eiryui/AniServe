@@ -541,15 +541,17 @@ def detail_bounds(page,per_page):
     """(lo, hi) item offsets for a request. Without per_page the whole list is page 1, so any later page is empty."""
     if per_page:return (page-1)*per_page,page*per_page
     return (0 if page==1 else 10**9),None
-def detail_response(response,page,per_page,total,have,complete,key,items):
+def detail_response(response,page,per_page,total,have,complete,key,items,bare=False):
     response.headers[INDEX_HEADER]="complete" if complete else "partial"
+    if not per_page and bare:return {key:items}  # like /relations: no per_page means the plain list, paging fields only when asked for
     if not per_page:return {"page":page,"perPage":total,"total":total,"hasNextPage":False,key:items}  # no per_page: everything is on page 1
     return {"page":page,"perPage":per_page,"total":total,"hasNextPage":page*per_page<min(have,total),key:items}
 @app.get("/anime/{anilist_id}/characters")
 async def chars(anilist_id:int,response:Response,page:PageQ=1,per_page:OptPerPage=None,is_adult:Adult=False):
     media=await asyncio.to_thread(get_media,anilist_id,is_adult)
+    if not per_page:page=1  # same as /relations: without per_page every character comes back and page is ignored
     edges,total,have,complete=await asyncio.to_thread(detail_window,media,"characters",*detail_bounds(page,per_page))
-    return detail_response(response,page,per_page,total,have,complete,"characters",ordered(edges,"characters.edges"))
+    return detail_response(response,page,per_page,total,have,complete,"characters",ordered(edges,"characters.edges"),bare=True)
 @app.get("/anime/{anilist_id}/relations")
 async def relations(anilist_id:int,page:PageQ=1,per_page:OptPerPage=None,is_adult:Adult=False):
     media=await asyncio.to_thread(get_media,anilist_id,is_adult);title=_pick(media["title"],("romaji","english")) if STRICT else media["title"]
@@ -566,8 +568,9 @@ def finish_recs(nodes,is_adult):
 @app.get("/anime/{anilist_id}/recommendations")
 async def recommendations(anilist_id:int,response:Response,page:PageQ=1,per_page:OptPerPage=None,is_adult:Adult=False):
     media=await asyncio.to_thread(get_media,anilist_id,is_adult,"raw")  # unfiltered, so the stored page can be sliced like AniList's
+    if not per_page:page=1  # same as /relations: without per_page every recommendation comes back and page is ignored
     nodes,total,have,complete=await asyncio.to_thread(detail_window,media,"recommendations",*detail_bounds(page,per_page))
-    return detail_response(response,page,per_page,total,have,complete,"recommendations",await asyncio.to_thread(finish_recs,nodes,is_adult))
+    return detail_response(response,page,per_page,total,have,complete,"recommendations",await asyncio.to_thread(finish_recs,nodes,is_adult),bare=True)
 def schedule_item(x,now):
     """Miruro-compatible schedule entry: slim list fields plus next_episode / airingAt / timeUntilAiring (and flat color / banner / synopsis when API_STRICT_MIRURO_SHAPE is off)."""
     a=x.get("nextAiringEpisode")or{};airing=a.get("airingAt")

@@ -6,7 +6,7 @@
     { name: "page", type: "int", def: "1", desc: "Page number, starting at 1." },
     { name: "per_page", type: "int", def: "20", desc: "Results per page, 1 to 50. Values outside that range return 422." },
   ];
-  const detailPaging = [PAGING[0], { name: "per_page", type: "int", def: "all", desc: "Results per page, 1 to 50. Leave it out to get every item in one response (page 1, perPage = total). Values outside 1 to 50 return 422." }];
+  const detailPaging = [PAGING[0], { name: "per_page", type: "int", def: "all", desc: "Results per page, 1 to 50. Leave it out to get every item in one response; <code>page</code> is then ignored and no paging fields are added to the body. Values outside 1 to 50 return 422." }];
   const paging = (perPage, max) => [PAGING[0], { name: "per_page", type: "int", def: String(perPage), desc: "Results per page, 1 to " + max + ". Values outside that range return 422." }];
 
   const ADULT = { name: "isAdult", type: "bool", def: "false", desc: "<code>true</code> includes adult titles alongside the rest. <code>false</code> or omitted hides them, including from relations and recommendations." };
@@ -112,7 +112,7 @@
           {
             id: "characters", path: "/anime/{id}/characters",
             summary: "Characters with their voice actors.",
-            desc: "Characters ordered by role then relevance, with every voice actor language. The first 25 come straight from the catalog record; later pages are read from the database. Without <code>per_page</code> every character is returned in one response. Items not indexed yet are left out and the response carries <code>X-Index-Status: partial</code>; <code>hasNextPage</code> only promises items that exist.",
+            desc: "Characters ordered by role then relevance, with every voice actor language. Returns every character unless you pass <code>per_page</code>, which also adds <code>page</code>, <code>perPage</code>, <code>total</code> and <code>hasNextPage</code> to the body. The first 25 come straight from the catalog record; later pages are read from the database. Items not indexed yet are left out and the response carries <code>X-Index-Status: partial</code>.",
             params: [{ name: "id", type: "int", req: true, desc: "AniList id, in the path." }, ...detailPaging, ADULT],
             example: "/anime/20/characters",
           },
@@ -126,7 +126,7 @@
           {
             id: "recommendations", path: "/anime/{id}/recommendations",
             summary: "Community recommendations, all of them unless you set per_page.",
-            desc: "Without <code>per_page</code> every recommendation is returned: a title with a <code>total</code> of 100 returns all 100. The first 25 come straight from the catalog record; the rest are read from the database (<code>X-Index-Status: partial</code> until they are stored). <code>total</code> is the real number of recommendations.",
+            desc: "Returns every recommendation unless you pass <code>per_page</code>, which also adds <code>page</code>, <code>perPage</code>, <code>total</code> and <code>hasNextPage</code> to the body. The first 25 come straight from the catalog record; the rest are read from the database (<code>X-Index-Status: partial</code> until they are stored).",
             params: [{ name: "id", type: "int", req: true, desc: "AniList id, in the path." }, ...detailPaging, ADULT],
             example: "/anime/21/recommendations",
           },

@@ -155,8 +155,8 @@ To prepare an empty database (for tests, or to load data from another source): `
 
 AniList serves characters and recommendations 25 at a time, and they are stored the same way: block 1 sits on the title's record in `anilist_catalog`, blocks 2, 3, ... are rows in `anilist_detail_pages`. AniServe cuts the window a request asks for out of those blocks:
 
-1. `/anime/{id}/characters` and `/anime/{id}/recommendations` cut the requested window from the blocks. The client's `per_page` does not matter: items 21 to 30 use blocks 1 and 2, items 51 to 100 use blocks 3 and 4. With `per_page` left out the window is the whole list, so every stored item comes back in one response.
-2. A block that is not in the database is not served. The response holds the items stored so far (possibly none), `total` is still AniList's real total, and `hasNextPage` is only true when the next item exists.
+1. `/anime/{id}/characters` and `/anime/{id}/recommendations` cut the requested window from the blocks. The client's `per_page` does not matter: items 21 to 30 use blocks 1 and 2, items 51 to 100 use blocks 3 and 4. With `per_page` left out the window is the whole list, so every stored item comes back in one response, without paging fields.
+2. A block that is not in the database is not served. The response holds the items stored so far (possibly none). With `per_page`, `total` is still AniList's real total and `hasNextPage` is only true when the next item exists.
 3. Every one of these routes, and `/info`, sets an **`X-Index-Status`** header: `complete` when everything for that title is stored, `partial` otherwise.
 4. `/info` always returns `staff`, `externalLinks`, `streamingEpisodes` and `stats`; for a title that is not fully stored yet they are empty (and `X-Index-Status` is `partial`), so clients can read them without checks.
 
@@ -205,9 +205,9 @@ All routes are `GET`. Collections take `page` (default `1`, minimum 1) and `per_
 | Route | Contents |
 |---|---|
 | `/info/{id}` | The full record for an AniList id, including staff, external links, streaming episodes and score stats. `404` if it is not in the database. Staff, links, streaming episodes and stats are whatever is stored for the title; AniServe never calls AniList, and a title that is not fully stored returns them empty with `X-Index-Status: partial`. Voice actors are Japanese only here. |
-| `/anime/{id}/characters` | Characters with voice actors (all languages). **Without `per_page` every character is returned** (`page` 1, `perPage` = `total`). With `per_page` (1 to 50) it pages normally with `page` (default 1). Stored in blocks of 25: the first block is on the catalog record, later blocks are in `anilist_detail_pages` and only served once stored (`X-Index-Status: partial` until then). See [Characters and recommendations](#characters-and-recommendations-blocks-of-25). |
+| `/anime/{id}/characters` | Characters with voice actors (all languages). All of them are returned unless you pass `per_page` (1 to 50, with `page`), which also adds `page`, `perPage`, `total` and `hasNextPage` to the body. Stored in blocks of 25: the first block is on the catalog record, later blocks are in `anilist_detail_pages` and only served once stored (`X-Index-Status: partial` until then). See [Characters and recommendations](#characters-and-recommendations-blocks-of-25). |
 | `/anime/{id}/relations` | Related media (sequels, prequels, adaptations and so on). All of them are returned unless you pass `per_page` (1 to 50, with `page`), which adds `page`, `perPage`, `total` and `hasNextPage` to the body. |
-| `/anime/{id}/recommendations` | Recommendations with the real `total`. **Without `per_page` every recommendation is returned**: `/anime/21/recommendations` with a `total` of 100 returns all 100. With `per_page` (1 to 50) it pages normally with `page` (default 1). Same blocks of 25 and the same `X-Index-Status` header as characters. `/info` still lists the first 10. |
+| `/anime/{id}/recommendations` | Community recommendations. All of them are returned unless you pass `per_page` (1 to 50, with `page`), which also adds `page`, `perPage`, `total` and `hasNextPage` to the body. Same blocks of 25 and the same `X-Index-Status` header as characters. `/info` still lists the first 10. |
 
 ### Catalog and service
 
@@ -243,7 +243,7 @@ Collection items use the slim list shape (no description, characters, relations 
 
 **Detail routes** return `characters`, `relations` or `recommendations` arrays inside their own envelopes. `/anime/{id}/relations` also returns the show's `id` and `title`.
 
-**No `per_page`, no paging.** On `/anime/{id}/characters`, `/anime/{id}/recommendations` and `/anime/{id}/relations`, leaving `per_page` out returns the whole list at once. For characters and recommendations the envelope is `{ "page": 1, "perPage": <total>, "total": <total>, "hasNextPage": false, ... }`, and `page=2` or higher is empty because everything is on page 1. `total` is AniList's real total, so while a title is only partly stored the array can hold fewer items than `total` and the `X-Index-Status` header says `partial`; adult entries are left out unless `isAdult=true`, so the array can also be shorter than `total` for that reason.
+**No `per_page`, no paging.** On `/anime/{id}/characters`, `/anime/{id}/recommendations` and `/anime/{id}/relations`, leaving `per_page` out returns the whole list at once. The body then carries no paging fields and `page` is ignored; `per_page` adds `page`, `perPage`, `total` and `hasNextPage`. While a title is only partly stored the array can hold fewer items than AniList's real total and the `X-Index-Status` header says `partial`; adult entries are left out unless `isAdult=true`, so the array can also be shorter for that reason.
 
 ---
 

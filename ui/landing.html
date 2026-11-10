@@ -177,7 +177,7 @@
       <ol class="steps">
         <li>
           <span class="n">1</span>
-          <div><h3>Collections are paginated</h3><p>Pass <code>page</code> and <code>per_page</code>. <code>per_page</code> is 1 to 50 and anything outside that returns <code>422</code>. Every list returns <code>page</code>, <code>perPage</code>, <code>total</code>, <code>hasNextPage</code> and <code>results</code>. The exceptions are <code>/anime/{id}/characters</code>, <code>/recommendations</code> and <code>/relations</code>: leave <code>per_page</code> out and you get the whole list in one response.</p></div>
+          <div><h3>Collections are paginated</h3><p>Pass <code>page</code> and <code>per_page</code>. <code>per_page</code> is 1 to 50 and anything outside that returns <code>422</code>. Every list returns <code>page</code>, <code>perPage</code>, <code>total</code>, <code>hasNextPage</code> and <code>results</code>. The exceptions are <code>/anime/{id}/characters</code>, <code>/recommendations</code> and <code>/relations</code>: leave <code>per_page</code> out and you get the whole list in one response, without <code>page</code>, <code>perPage</code>, <code>total</code> or <code>hasNextPage</code> in the body (<code>page</code> is ignored). Pass <code>per_page</code> and those four fields are added.</p></div>
         </li>
         <li>
           <span class="n">2</span>
